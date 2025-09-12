@@ -75,7 +75,7 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading }: P
         return (
              <Card>
                 <CardHeader>
-                    <CardTitle className="font-belleza">Palette</CardTitle>
+                    <CardTitle className="font-belleza">Image Palette</CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center gap-2 pt-2">
                     <Skeleton className="h-10 w-20" />
@@ -93,7 +93,7 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading }: P
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="font-belleza">Dominant Colors Palette</CardTitle>
+                <CardTitle className="font-belleza">Image Palette</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row items-center gap-4 pt-2">
                 <div className="flex border rounded-md">
