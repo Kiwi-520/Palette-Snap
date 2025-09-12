@@ -14,9 +14,8 @@ interface GeneratedPaletteProps {
 
 function generateComplementaryPalette(baseColors: string[]): Palette {
   if (baseColors.length === 0) return [];
-  const MAX_COLORS = 10;
   
-  const getComplementary = (hex: string) => {
+  const getComplementary = (hex: string): string => {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
@@ -25,7 +24,7 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
   
-  const changeLightness = (hex: string, amount: number) => {
+  const changeLightness = (hex: string, amount: number): string => {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
@@ -34,26 +33,25 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     return rgbToHex(newRgb.r, newRgb.g, newRgb.b);
   }
 
-  // Use the first and a middle color for variety
+  // Use the first color from the image palette as the primary base.
   const primaryBase = baseColors[0];
-  const secondaryBase = baseColors.length > 1 ? baseColors[Math.floor(baseColors.length / 2)] : baseColors[0];
-
   const primaryComp = getComplementary(primaryBase);
   
-  const finalPalette = [
-    changeLightness(primaryBase, 0.2), // Light tint
-    changeLightness(primaryBase, 0.1), // Softer tint
-    primaryBase, // Base
-    changeLightness(primaryBase, -0.1), // Shade
-    changeLightness(primaryBase, -0.2), // Darker shade
-    changeLightness(primaryComp, 0.2), // Complementary light tint
-    changeLightness(primaryComp, 0.1), // Complementary softer tint
-    primaryComp, // Complementary Base
-    changeLightness(primaryComp, -0.1), // Complementary shade
-    changeLightness(primaryComp, -0.2), // Complementary darker shade
+  const finalPalette: Palette = [
+    changeLightness(primaryBase, 0.2),   // Lighter tint of original
+    changeLightness(primaryBase, 0.1),   // Light tint of original
+    primaryBase,                         // Original base color
+    changeLightness(primaryBase, -0.1),  // Dark shade of original
+    changeLightness(primaryBase, -0.2),  // Darker shade of original
+    changeLightness(primaryComp, 0.2),   // Lighter tint of complement
+    changeLightness(primaryComp, 0.1),   // Light tint of complement
+    primaryComp,                         // Complementary color
+    changeLightness(primaryComp, -0.1),  // Dark shade of complement
+    changeLightness(primaryComp, -0.2),  // Darker shade of complement
   ];
   
-  return [...new Set(finalPalette)].slice(0, MAX_COLORS);
+  // Ensure no duplicate colors if tints/shades overlap
+  return [...new Set(finalPalette)].slice(0, 10);
 }
 
 
