@@ -87,26 +87,33 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (filteredImage && imageRef.current) {
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      const img = imageRef.current;
-      
-      const updateCanvas = () => {
+    if (!filteredImage || !imageRef.current) return;
+    
+    const img = imageRef.current;
+    
+    const updateCanvas = () => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
         if (context && img.complete && img.naturalWidth > 0) {
-          canvas.width = img.clientWidth;
-          canvas.height = img.clientHeight;
-          context.drawImage(img, 0, 0, img.clientWidth, img.clientHeight);
-          canvasRef.current = canvas;
+            canvas.width = img.clientWidth;
+            canvas.height = img.clientHeight;
+            context.drawImage(img, 0, 0, img.clientWidth, img.clientHeight);
+            canvasRef.current = canvas;
         }
-      };
-      
-      if (img.complete) {
+    };
+    
+    if (img.complete) {
         updateCanvas();
-      } else {
+    } else {
         img.onload = updateCanvas;
-      }
     }
+    
+    // Add a resize observer to update canvas if window size changes
+    const resizeObserver = new ResizeObserver(updateCanvas);
+    resizeObserver.observe(img);
+
+    return () => resizeObserver.disconnect();
+
   }, [filteredImage]);
 
   const updateLoupe = useCallback((x: number, y: number) => {
@@ -131,7 +138,7 @@ export default function Home() {
             setFilteredImage={setFilteredImage}
             imageRef={imageRef} 
             pickerState={pickerState}
-            onColorSelect={setPickerState}
+            setPickerState={setPickerState}
             updateLoupe={updateLoupe}
             blindnessMode={blindnessMode}
             setBlindnessMode={setBlindnessMode}
