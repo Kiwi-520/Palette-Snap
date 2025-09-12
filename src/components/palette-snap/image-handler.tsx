@@ -64,21 +64,26 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
     
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+    }
 
     animationFrameRef.current = requestAnimationFrame(() => {
         const target = e.currentTarget;
         const rect = target.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
-        updateLoupe(x, y);
+        if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+            updateLoupe(x, y);
+        }
     });
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     e.currentTarget.releasePointerCapture(e.pointerId);
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+    }
     setPickerState(null);
   };
 
@@ -99,7 +104,7 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
           onPointerCancel={image ? handlePointerUp : undefined}
         >
           { (filteredImage || image) ? (
-            <Image ref={imageRef} src={filteredImage || image!} alt="Uploaded preview" fill className="object-contain pointer-events-none" />
+            <Image ref={imageRef} src={filteredImage || image!} alt="Uploaded preview" fill className="object-contain pointer-events-none" unoptimized/>
           ) : placeholderImage && (
             <Image src={placeholderImage.imageUrl} alt={placeholderImage.description} data-ai-hint={placeholderImage.imageHint} fill className="object-cover" priority />
           )}
@@ -130,7 +135,7 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
             </div>
           )}
 
-          {pickerState && imageRef.current && (
+          {pickerState && imageRef.current && filteredImage && (
             <div 
                 className="absolute pointer-events-none -translate-x-1/2 -translate-y-[calc(100%+1rem)] rounded-full w-24 h-24 border-4 border-white bg-white/30 backdrop-blur-sm shadow-2xl overflow-hidden flex items-center justify-center"
                 style={{ 
@@ -146,7 +151,7 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
                     left: `${-pickerState.x * 8 + 44}px`,
                     top: `${-pickerState.y * 8 + 44}px`,
                 }}>
-                    <Image src={filteredImage!} alt="Loupe view" fill className="object-contain" />
+                    <Image src={filteredImage} alt="Loupe view" fill className="object-contain" unoptimized />
                 </div>
                 <div className="absolute w-full h-full" style={{ backgroundSize: '8px 8px', backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.2) 1px, transparent 1px)' }}/>
                 <div className="absolute w-[8px] h-[8px] border border-red-500 bg-transparent" />

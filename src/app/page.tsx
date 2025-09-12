@@ -78,8 +78,7 @@ export default function Home() {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d', { willReadFrequently: true });
       const img = imageRef.current;
-      let animationFrameId: number;
-
+      
       const updateCanvas = () => {
         if (context && img.complete && img.naturalWidth > 0) {
           canvas.width = img.clientWidth;
@@ -89,19 +88,10 @@ export default function Home() {
         }
       };
       
-      img.onload = updateCanvas;
-      updateCanvas();
-
-      const handleResize = () => {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = requestAnimationFrame(updateCanvas);
-      };
-
-      window.addEventListener('resize', handleResize);
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        img.onload = null;
-        cancelAnimationFrame(animationFrameId);
+      if (img.complete) {
+        updateCanvas();
+      } else {
+        img.onload = updateCanvas;
       }
     }
   }, [filteredImage]);
