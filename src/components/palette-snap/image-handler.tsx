@@ -25,10 +25,10 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number>();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [pickerState, setPickerState] = useState<{ x: number; y: number; color: string; } | null>(null);
-  const [isPicking, setIsPicking] = useState(false);
-
+  
   const { toast } = useToast();
 
   const handleCapture = (imageData: string) => {
@@ -58,7 +58,6 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
       }
       
       setPickerState(null);
-      setIsPicking(false);
     }
 
     return () => {
@@ -66,6 +65,7 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
         cancelAnimationFrame(animationFrameRef.current);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [image]);
 
   const updateLoupe = useCallback((x: number, y: number) => {
@@ -73,72 +73,79 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
   
     const context = canvasRef.current.getContext('2d');
     if (context) {
-      const pixel = context.getImageData(x, y, 1, 1).data;
+      const clampedX = Math.max(0, Math.min(x, canvasRef.current.width - 1));
+      const clampedY = Math.max(0, Math.min(y, canvasRef.current.height - 1));
+      
+      const pixel = context.getImageData(clampedX, clampedY, 1, 1).data;
       const color = `#${('000000' + ((pixel[0] << 16) | (pixel[1] << 8) | pixel[2]).toString(16)).slice(-6).toUpperCase()}`;
-      setPickerState({ x, y, color });
+      setPickerState({ x: clampedX, y: clampedY, color });
     }
   }, []);
-
-  const handlePointerDown = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+  
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!image) return;
-    setIsPicking(true);
-    const rect = e.currentTarget.getBoundingClientRect();
-    const touch = 'touches' in e ? e.touches[0] : e;
-    const x = Math.round(touch.clientX - rect.left);
-    const y = Math.round(touch.clientY - rect.top);
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+
+    const rect = target.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
     updateLoupe(x, y);
   };
 
-  const handlePointerMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    if (!isPicking || !image) return;
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only move if the picker is active (i.e., pointer is down)
+    if (!image || !pickerState) return;
 
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    // Capture the target and event details before the animation frame
-    const currentTarget = e.currentTarget;
-    const touch = 'touches' in e ? e.touches[0] : e;
-    const clientX = touch.clientX;
-    const clientY = touch.clientY;
-
-    animationFrameRef.current = requestAnimationFrame(() => {
-      const rect = currentTarget.getBoundingClientRect();
-      const x = Math.round(clientX - rect.left);
-      const y = Math.round(clientY - rect.top);
-
-      if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
-        setIsPicking(false);
-        return;
-      }
-
-      updateLoupe(x, y);
-    });
-  };
-
-  const handlePointerUp = () => {
     if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
     }
-    if (isPicking && pickerState) {
+    
+    const target = e.currentTarget;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    animationFrameRef.current = requestAnimationFrame(() => {
+        const rect = target.getBoundingClientRect();
+        const x = Math.round(clientX - rect.left);
+        const y = Math.round(clientY - rect.top);
+        
+        if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+            return;
+        }
+
+        updateLoupe(x, y);
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    if (pickerState) {
         navigator.clipboard.writeText(pickerState.color);
         toast({ title: `Copied ${pickerState.color} to clipboard!` });
     }
-    setIsPicking(false);
+
+    const target = e.currentTarget;
+    if(target.hasPointerCapture(e.pointerId)) {
+        target.releasePointerCapture(e.pointerId);
+    }
+    setPickerState(null);
   };
+
 
   return (
     <Card className="w-full max-w-4xl mx-auto overflow-hidden shadow-2xl shadow-primary/10 border-primary/20">
       <CardContent className="p-2 sm:p-4">
         <div 
+          ref={containerRef}
           className={cn("relative aspect-video w-full rounded-lg overflow-hidden bg-muted flex items-center justify-center group select-none", image ? "cursor-crosshair" : "cursor-default")}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         >
           {image ? (
             <Image ref={imageRef} src={image} alt="Uploaded preview" fill className="object-contain pointer-events-none" />
@@ -146,8 +153,9 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
             <Image src={placeholderImage.imageUrl} alt={placeholderImage.description} data-ai-hint={placeholderImage.imageHint} fill className="object-cover" priority />
           )}
 
-          {isPicking && pickerState && imageRef.current && (
+          {pickerState && imageRef.current && (
             <>
+                {/* The Loupe */}
                 <div 
                     className="absolute pointer-events-none -translate-x-1/2 -translate-y-[calc(100%+2rem)] rounded-full w-32 h-32 border-4 border-white bg-white shadow-2xl overflow-hidden flex items-center justify-center"
                     style={{ 
@@ -156,20 +164,24 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
                         imageRendering: 'pixelated',
                     }}
                 >
+                    {/* Zoomed Image */}
                     <div style={{
                         position: 'absolute',
                         width: `${imageRef.current!.clientWidth * 5}px`,
                         height: `${imageRef.current!.clientHeight * 5}px`,
-                        left: `${-pickerState.x * 5 + 64}px`,
-                        top: `${-pickerState.y * 5 + 64}px`,
+                        left: `${-pickerState.x * 5 + 64 - 2.5}px`,
+                        top: `${-pickerState.y * 5 + 64 - 2.5}px`,
                     }}>
                         <Image src={image!} alt="Loupe view" fill className="object-contain" />
                     </div>
-                    <div className="absolute w-full h-full">
-                        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-black/30 -translate-y-[1px]"></div>
-                        <div className="absolute left-1/2 top-0 h-full w-[2px] bg-black/30 -translate-x-[1px]"></div>
-                    </div>
+                    {/* Grid Overlay */}
+                    <div className="absolute w-full h-full" style={{ backgroundSize: '12.8px 12.8px', backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)' }}/>
+
+                    {/* Center Pixel Indicator */}
+                    <div className="absolute w-[12.8px] h-[12.8px] border-2 border-red-500 bg-transparent" />
                 </div>
+                
+                {/* Cursor Marker and Color Code */}
                 <div 
                     className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2"
                     style={{ left: pickerState.x, top: pickerState.y }}
@@ -186,8 +198,8 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
           )}
 
           <div className={cn("absolute inset-0 bg-black/40 flex-col sm:flex-row items-center justify-center gap-4 transition-opacity duration-300",
-            isPicking ? "opacity-0" : "opacity-0 group-hover:opacity-100",
-            image && !isPicking && "group-hover:opacity-0"
+            pickerState ? "opacity-0" : "opacity-0 group-hover:opacity-100",
+            image && !pickerState && "group-hover:opacity-0"
           )}>
             {!image && <Pipette className="h-16 w-16 text-white/50 hidden sm:block" />}
             <Button asChild size="lg" className="font-headline">
@@ -220,7 +232,7 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
             />
           </div>
 
-          {image && !isPicking && (
+          {image && !pickerState && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none">
               <div className="flex items-center gap-2 bg-black/60 text-white font-headline text-sm px-3 py-2 rounded-lg">
                 <Move className="h-5 w-5"/>
@@ -233,3 +245,5 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
     </Card>
   );
 }
+
+    
