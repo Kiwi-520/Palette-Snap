@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Palette } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 
 export function Navbar() {
   return (
@@ -12,7 +12,7 @@ export function Navbar() {
           </a>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-            <Button>Sign In</Button>
+            <ThemeToggle />
         </div>
       </div>
     </header>
