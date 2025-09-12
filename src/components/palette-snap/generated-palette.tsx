@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Loader2, Save, Check } from 'lucide-react';
+import { Loader2, Save, Check, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { ColorHistogram } from '@/lib/color-quantizer';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { getComplementaryPalette } from '@/app/actions';
+import type { Palette } from '@/app/page';
 
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -37,6 +39,8 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
 const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; onSave: (palette: string[]) => void; }) => {
   const { toast } = useToast();
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [suggestedPalette, setSuggestedPalette] = useState<Palette | null>(null);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   
   const sortedHistogram = useMemo(() => {
     return [...histogram].sort((a, b) => {
@@ -52,6 +56,21 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
     });
   }, [histogram]);
 
+  const handleSuggestPalette = async () => {
+    if (selectedColors.length === 0) {
+      toast({ title: 'Select some colors first!', description: 'Choose colors from the grid to generate a complementary palette.'});
+      return;
+    }
+    setIsSuggesting(true);
+    setSuggestedPalette(null);
+    const result = await getComplementaryPalette(selectedColors);
+    if (result.success && result.palette) {
+      setSuggestedPalette(result.palette);
+    } else {
+      toast({ variant: 'destructive', title: 'Suggestion Failed', description: result.error });
+    }
+    setIsSuggesting(false);
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -122,10 +141,41 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
         <ScrollBar orientation="vertical" />
       </ScrollArea>
       
-      <Button onClick={() => onSave(selectedColors)} disabled={selectedColors.length === 0} className="font-headline">
-        <Save className="mr-2" /> 
-        Save Selected Colors ({selectedColors.length})
-      </Button>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <Button onClick={() => onSave(selectedColors)} disabled={selectedColors.length === 0} className="font-headline">
+          <Save className="mr-2" /> 
+          Save Selected Colors ({selectedColors.length})
+        </Button>
+        <Button onClick={handleSuggestPalette} disabled={isSuggesting || selectedColors.length === 0} variant="secondary" className="font-headline">
+          {isSuggesting ? <Loader2 className="mr-2 animate-spin" /> : <Wand2 className="mr-2" />}
+          Suggest Complementary
+        </Button>
+      </div>
+      
+      {suggestedPalette && (
+        <div className="mt-8 w-full max-w-lg">
+            <h3 className="font-headline text-2xl text-center mb-4">Suggested Palette</h3>
+            <div className="grid grid-cols-5 gap-4">
+                {suggestedPalette.map((color, index) => (
+                    <div key={index} className="flex flex-col items-center gap-2 group">
+                        <div 
+                            className="w-full aspect-square rounded-lg shadow-md cursor-pointer transition-transform duration-200 group-hover:scale-105" 
+                            style={{ backgroundColor: color }}
+                            onClick={() => copyToClipboard(color)}
+                            title={`Click to copy ${color}`}
+                        />
+                        <p className="font-code text-sm text-foreground/70 tracking-wider">{color}</p>
+                    </div>
+                ))}
+            </div>
+             <div className="text-center mt-4">
+                <Button onClick={() => onSave(suggestedPalette)} variant="outline">
+                    <Save className="mr-2" />
+                    Save Suggested Palette
+                </Button>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
