@@ -47,22 +47,17 @@ const colorNameList: [string, number, number, number][] = [
     ["Ivory", 255, 255, 240], ["White", 255, 255, 255]
 ];
 
-function hexToRgb(hex: string): { r: number, g: number, b: number } {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-}
+import { hexToRgb, rgbToHsl } from "./color-converter";
 
 export function getClosestColorName(hex: string): string {
-    const { r, g, b } = hexToRgb(hex);
+    const rgb = hexToRgb(hex);
+    if (!rgb) return "Unknown";
+    
     let closestDistance = Infinity;
     let closestName = "Unknown";
 
     for (const [name, r2, g2, b2] of colorNameList) {
-        const distance = Math.sqrt(Math.pow(r - r2, 2) + Math.pow(g - g2, 2) + Math.pow(b - b2, 2));
+        const distance = Math.sqrt(Math.pow(rgb.r - r2, 2) + Math.pow(rgb.g - g2, 2) + Math.pow(rgb.b - b2, 2));
         if (distance < closestDistance) {
             closestDistance = distance;
             closestName = name;
@@ -72,37 +67,26 @@ export function getClosestColorName(hex: string): string {
 }
 
 export function hexToRgbString(hex: string): string {
-    const { r, g, b } = hexToRgb(hex);
-    return `rgb(${r}, ${g}, ${b})`;
+    const rgb = hexToRgb(hex);
+    if (!rgb) return "rgb(0, 0, 0)";
+    return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
 }
 
-export function hexToHsl(hex: string): string {
-    let { r, g, b } = hexToRgb(hex);
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
+export function hexToHslString(hex: string): string {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return "hsl(0, 0%, 0%)";
 
-    if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
-    }
-
-    h = Math.round(h * 360);
-    s = Math.round(s * 100);
-    l = Math.round(l * 100);
-
-    return `hsl(${h}, ${s}%, ${l}%)`;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    
+    return `hsl(${Math.round(hsl.h)}, ${Math.round(hsl.s * 100)}%, ${Math.round(hsl.l * 100)}%)`;
 }
 
 
 export function hexToCmyk(hex: string): string {
-    let { r, g, b } = hexToRgb(hex);
+    const rgb = hexToRgb(hex);
+    if (!rgb) return "cmyk(0%, 0%, 0%, 100%)";
+
+    let { r, g, b } = rgb;
     r /= 255; g /= 255; b /= 255;
 
     const k = 1 - Math.max(r, g, b);

@@ -12,18 +12,23 @@ interface GeneratedPaletteProps {
   baseColors: string[];
 }
 
+// Fixed function to generate a mathematically correct complementary palette
 function generateComplementaryPalette(baseColors: string[]): Palette {
   if (baseColors.length === 0) return [];
-  
+
+  // This is the corrected function using HSL hue shift
   const getComplementary = (hex: string): string => {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
-    // Invert the RGB values
-    const compRgb = {
-      r: 255 - rgb.r,
-      g: 255 - rgb.g,
-      b: 255 - rgb.b,
-    };
+
+    // Convert to HSL to perform a correct hue shift
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    
+    // Correctly find the complement by shifting the hue by 180 degrees
+    hsl.h = (hsl.h + 180) % 360;
+
+    // Convert the new HSL value back to RGB and then to HEX
+    const compRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
   

@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getClosestColorName, hexToCmyk, hexToHsl, hexToRgbString as hexToRgb } from "@/lib/color-names";
-import { Skeleton } from "../ui/skeleton";
+import { getClosestColorName, hexToCmyk, hexToHslString, hexToRgbString } from "@/lib/color-names";
 
 interface ColorDetailsProps {
     pickerState: { x: number; y: number; color: string; } | null;
@@ -45,8 +44,8 @@ export function ColorDetails({ pickerState }: ColorDetailsProps) {
         }
 
         const colorName = getClosestColorName(color);
-        const rgb = hexToRgb(color);
-        const hsl = hexToHsl(color);
+        const rgb = hexToRgbString(color);
+        const hsl = hexToHslString(color);
         const cmyk = hexToCmyk(color);
 
         return (
