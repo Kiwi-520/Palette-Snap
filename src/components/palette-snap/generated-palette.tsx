@@ -78,8 +78,8 @@ export function GeneratedPalette({ isLoading, palette, onSave }: GeneratedPalett
                     <PaletteDisplay palette={palette} onSave={onSave} onShare={sharePalette} />
                 ) : (
                     <div className="text-center text-foreground/60">
-                      <p className="font-headline text-xl">Palette generation is currently disabled.</p>
-                      <p className="font-body">Upload an image to see it here.</p>
+                      <p className="font-headline text-xl">Upload an image or use your camera</p>
+                      <p className="font-body">A new color palette will be generated for you.</p>
                     </div>
                 )}
             </div>

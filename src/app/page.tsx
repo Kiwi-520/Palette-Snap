@@ -7,6 +7,7 @@ import { AppHeader } from '@/components/palette-snap/app-header';
 import { ImageHandler } from '@/components/palette-snap/image-handler';
 import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
 import { SavedPalettes } from '@/components/palette-snap/saved-palettes';
+import { generatePaletteFromImage } from '@/lib/color-quantizer';
 
 export type Palette = string[];
 
@@ -17,22 +18,39 @@ export default function Home() {
   const [savedPalettes, setSavedPalettes] = useLocalStorage<Palette[]>('saved-palettes', []);
   const { toast } = useToast();
 
+  const processImage = async (dataUrl: string) => {
+    setImage(dataUrl);
+    setPalette(null);
+    setIsLoading(true);
+    try {
+      const newPalette = await generatePaletteFromImage(dataUrl);
+      setPalette(newPalette);
+    } catch (error) {
+      console.error("Failed to generate palette:", error);
+      toast({
+        variant: "destructive",
+        title: "Palette Generation Failed",
+        description: "Could not generate a color palette from the image.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        setImage(dataUrl);
-        setPalette(null);
+        processImage(dataUrl);
       };
       reader.readAsDataURL(file);
     }
   };
   
   const handleImageData = (dataUrl: string) => {
-    setImage(dataUrl);
-    setPalette(null);
+    processImage(dataUrl);
   }
 
   const savePalette = () => {
