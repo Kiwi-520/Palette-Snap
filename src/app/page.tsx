@@ -11,7 +11,6 @@ import { Camera, Upload } from 'lucide-react';
 import { CameraCapture } from '@/components/palette-snap/camera-capture';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import type { BlindnessMode } from '@/lib/color-blindness';
 import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
 import { hexToRgb, rgbToHsl } from '@/lib/color-converter';
 
@@ -19,8 +18,6 @@ export type Palette = string[];
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
-  const [filteredImage, setFilteredImage] = useState<string | null>(null);
-  const [blindnessMode, setBlindnessMode] = useState<BlindnessMode>('none');
   const [histogram, setHistogram] = useState<ColorHistogram | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -34,7 +31,6 @@ export default function Home() {
 
   const processImage = useCallback(async (dataUrl: string) => {
     setImage(dataUrl);
-    setFilteredImage(dataUrl);
     setHistogram(null);
     setPalette([]);
     setPickerState(null);
@@ -87,7 +83,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (!filteredImage || !imageRef.current) return;
+    if (!image || !imageRef.current) return;
     
     const img = imageRef.current;
     
@@ -114,7 +110,7 @@ export default function Home() {
 
     return () => resizeObserver.disconnect();
 
-  }, [filteredImage]);
+  }, [image]);
 
   const updateLoupe = useCallback((x: number, y: number) => {
     if (!canvasRef.current) return;
@@ -134,14 +130,10 @@ export default function Home() {
         <div className="lg:col-span-2 flex flex-col gap-8">
           <ImageHandler 
             image={image}
-            filteredImage={filteredImage}
-            setFilteredImage={setFilteredImage}
             imageRef={imageRef} 
             pickerState={pickerState}
             setPickerState={setPickerState}
             updateLoupe={updateLoupe}
-            blindnessMode={blindnessMode}
-            setBlindnessMode={setBlindnessMode}
           />
           <PaletteControls 
             palette={palette} 
