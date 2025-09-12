@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -68,37 +69,49 @@ function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: n
 
 // --- Algorithmic Palette Generation ---
 function generateComplementaryPalette(baseColors: string[]): Palette {
-    // 1. Average the selected colors
-    const avgRgb = baseColors.map(hexToRgb).reduce((acc, c) => ({ r: acc.r + c.r, g: acc.g + c.g, b: acc.b + c.b }), { r: 0, g: 0, b: 0 });
-    avgRgb.r /= baseColors.length;
-    avgRgb.g /= baseColors.length;
-    avgRgb.b /= baseColors.length;
+    const finalPalette: string[] = [];
+    const totalColors = 10;
+    const colorsPerBase = Math.max(1, Math.floor(totalColors / baseColors.length));
 
-    // 2. Convert average to HSL
-    const avgHsl = rgbToHsl(avgRgb.r, avgRgb.g, avgRgb.b);
+    // 1. For each selected base color, generate complementary colors
+    baseColors.forEach(baseHex => {
+        const baseRgb = hexToRgb(baseHex);
+        const baseHsl = rgbToHsl(baseRgb.r, baseRgb.g, baseRgb.b);
+        
+        // 2. Find the complementary hue
+        const complementaryHsl = { ...baseHsl, h: (baseHsl.h + 180) % 360 };
 
-    // 3. Find complementary hue
-    const complementaryHsl = { ...avgHsl, h: (avgHsl.h + 180) % 360 };
+        // 3. Generate a few colors from the complement
+        for (let i = 0; i < colorsPerBase; i++) {
+            if (finalPalette.length >= totalColors) break;
+            // Create a variety of lightness values for the complement
+            const lightness = 0.2 + (i / (colorsPerBase - 1)) * 0.6; // from 20% to 80%
+            const { r, g, b } = hslToRgb(complementaryHsl.h, complementaryHsl.s, lightness);
+            finalPalette.push(rgbToHex(r, g, b));
+        }
+    });
 
-    // 4. Generate 10 colors by creating tints and shades
-    const palette: Palette = [];
-    const steps = 5;
+    // 4. If palette is not full, fill with tints/shades of the original selections
+    let baseIndex = 0;
+    while(finalPalette.length < totalColors) {
+        const baseHex = baseColors[baseIndex % baseColors.length];
+        const baseRgb = hexToRgb(baseHex);
+        const baseHsl = rgbToHsl(baseRgb.r, baseRgb.g, baseRgb.b);
+        
+        // Add a tint or shade of the original color
+        const lightness = finalPalette.length % 2 === 0 ? Math.min(0.9, baseHsl.l + 0.2) : Math.max(0.1, baseHsl.l - 0.2);
+        const { r, g, b } = hslToRgb(baseHsl.h, baseHsl.s, lightness);
+        const newColor = rgbToHex(r,g,b);
 
-    // 5 colors from base average
-    for (let i = 0; i < steps; i++) {
-        const lightness = 0.15 + (i / (steps - 1)) * 0.7; // from 15% to 85% lightness
-        const {r, g, b} = hslToRgb(avgHsl.h, avgHsl.s, lightness);
-        palette.push(rgbToHex(r, g, b));
+        if (!finalPalette.includes(newColor)) {
+            finalPalette.push(newColor);
+        }
+        baseIndex++;
+        // Safety break to prevent infinite loops on very similar colors
+        if(baseIndex > totalColors * 2) break;
     }
 
-    // 5 colors from complement
-    for (let i = 0; i < steps; i++) {
-        const lightness = 0.15 + (i / (steps - 1)) * 0.7; // from 15% to 85% lightness
-        const {r, g, b} = hslToRgb(complementaryHsl.h, complementaryHsl.s, lightness);
-        palette.push(rgbToHex(r, g, b));
-    }
-    
-    return palette;
+    return finalPalette.slice(0, totalColors);
 }
 
 
