@@ -6,53 +6,79 @@ function rgbToHex(r: number, g: number, b: number): string {
   return "#" + ((1 << 24) + (rInt << 16) + (gInt << 8) + bInt).toString(16).slice(1).toUpperCase();
 }
 
-// Simple implementation of K-Means clustering for color quantization
+// K-Means clustering implementation for color quantization
 function kmeans(pixels: number[][], k: number): number[][] {
     if (pixels.length === 0 || k === 0) {
         return [];
     }
 
-    // --- Helper function to calculate distance between two colors ---
-    const colorDistance = (c1: number[], c2: number[]) => {
-        return Math.sqrt(
-            Math.pow(c1[0] - c2[0], 2) +
-            Math.pow(c1[1] - c2[1], 2) +
-            Math.pow(c1[2] - c2[2], 2)
-        );
+    const uniquePixels = Array.from(new Set(pixels.map(p => JSON.stringify(p)))).map(s => JSON.parse(s) as number[]);
+    if (uniquePixels.length < k) {
+        k = uniquePixels.length;
+    }
+    if (k === 0) return [];
+
+
+    // --- Helper function to calculate squared distance between two colors ---
+    const colorDistanceSquared = (c1: number[], c2: number[]) => {
+        return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2;
     };
 
-    // --- 1. Initialize centroids ---
-    // For simplicity, we'll pick k random pixels as initial centroids.
-    let centroids = pixels.slice(0, k);
-    
-    // A more robust way to initialize:
-    const uniquePixels = Array.from(new Set(pixels.map(p => JSON.stringify(p)))).map(s => JSON.parse(s));
-    if (uniquePixels.length < k) {
-        // If we have fewer unique pixels than k, just return the unique ones.
-        return uniquePixels;
-    }
-    centroids = uniquePixels.sort(() => 0.5 - Math.random()).slice(0, k);
+    // --- 1. Initialize centroids using k-means++ ---
+    let centroids: number[][] = [];
+    centroids.push(uniquePixels[Math.floor(Math.random() * uniquePixels.length)]);
 
+    while (centroids.length < k) {
+        let distances: number[] = uniquePixels.map(pixel => {
+            let minDistance = Infinity;
+            for (const centroid of centroids) {
+                const dist = colorDistanceSquared(pixel, centroid);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                }
+            }
+            return minDistance;
+        });
+
+        let sumDistances = distances.reduce((a, b) => a + b, 0);
+        let randomValue = Math.random() * sumDistances;
+        
+        let nextCentroid: number[] | null = null;
+        for (let i = 0; i < uniquePixels.length; i++) {
+            randomValue -= distances[i];
+            if (randomValue <= 0) {
+                nextCentroid = uniquePixels[i];
+                break;
+            }
+        }
+        centroids.push(nextCentroid || uniquePixels[uniquePixels.length - 1]);
+    }
 
     let assignments = new Array(pixels.length).fill(0);
     const maxIterations = 20;
 
     for (let i = 0; i < maxIterations; i++) {
         // --- 2. Assign pixels to the closest centroid ---
+        let changed = false;
         for (let j = 0; j < pixels.length; j++) {
             let minDistance = Infinity;
             let bestCentroid = 0;
             for (let c = 0; c < k; c++) {
-                const distance = colorDistance(pixels[j], centroids[c]);
+                const distance = colorDistanceSquared(pixels[j], centroids[c]);
                 if (distance < minDistance) {
                     minDistance = distance;
                     bestCentroid = c;
                 }
             }
-            assignments[j] = bestCentroid;
+            if (assignments[j] !== bestCentroid) {
+                assignments[j] = bestCentroid;
+                changed = true;
+            }
         }
 
-        // --- 3. Update centroids to be the average of their assigned pixels ---
+        if (!changed) break; // Convergence
+
+        // --- 3. Update centroids ---
         const newCentroids: number[][] = new Array(k).fill(0).map(() => [0, 0, 0]);
         const counts = new Array(k).fill(0);
 
@@ -70,24 +96,23 @@ function kmeans(pixels: number[][], k: number): number[][] {
                 newCentroids[c][1] /= counts[c];
                 newCentroids[c][2] /= counts[c];
             } else {
-                // If a centroid has no points, re-initialize it to a random pixel
-                newCentroids[c] = pixels[Math.floor(Math.random() * pixels.length)];
+                // If a centroid becomes empty, reinitialize it to the pixel furthest from other centroids.
+                let maxDist = -1;
+                let farthestPixel: number[] | null = null;
+                for (const pixel of uniquePixels) {
+                    let minDistToCentroid = Infinity;
+                    for (const centroid of newCentroids.filter((_, idx) => idx !== c)) {
+                       minDistToCentroid = Math.min(minDistToCentroid, colorDistanceSquared(pixel, centroid));
+                    }
+                    if (minDistToCentroid > maxDist) {
+                        maxDist = minDistToCentroid;
+                        farthestPixel = pixel;
+                    }
+                }
+                newCentroids[c] = farthestPixel || uniquePixels[Math.floor(Math.random() * uniquePixels.length)];
             }
         }
-        
-        // --- 4. Check for convergence ---
-        let converged = true;
-        for (let c = 0; c < k; c++) {
-            if (colorDistance(centroids[c], newCentroids[c]) > 0.1) {
-                converged = false;
-                break;
-            }
-        }
-
         centroids = newCentroids;
-        if (converged) {
-            break;
-        }
     }
 
     return centroids;
@@ -107,20 +132,19 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
           return reject(new Error('Could not get canvas context.'));
         }
 
-        const MAX_WIDTH = 100; // Reduced size for faster processing
-        const MAX_HEIGHT = 100;
+        const MAX_DIMENSION = 100;
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
           }
         } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
+          if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
           }
         }
         canvas.width = width;
@@ -132,23 +156,26 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
         
         const pixelArray: number[][] = [];
         for (let i = 0; i < pixelData.length; i += 4) {
-          if (pixelData[i+3] < 125) continue;
+          // Skip transparent pixels
+          if (pixelData[i+3] < 128) continue;
           
-          const r = pixelData[i];
-          const g = pixelData[i+1];
-          const b = pixelData[i+2];
-          
-          pixelArray.push([r, g, b]);
+          pixelArray.push([pixelData[i], pixelData[i+1], pixelData[i+2]]);
         }
         
         if (pixelArray.length === 0) {
-          return reject(new Error("No significant colors found in the image."));
+          return resolve([]);
         }
-
-        // Use the K-Means implementation
+        
         const centroids = kmeans(pixelArray, colorCount);
         
-        const palette = centroids.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
+        let palette = centroids.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
+
+        // Ensure palette has the requested number of colors if possible
+        if (palette.length < colorCount) {
+           const uniqueColors = Array.from(new Set(pixelArray.map(p => rgbToHex(p[0], p[1], p[2]))));
+           const additionalColors = uniqueColors.filter(c => !palette.includes(c));
+           palette = [...palette, ...additionalColors.slice(0, colorCount - palette.length)];
+        }
         
         resolve(palette);
       } catch (error) {
