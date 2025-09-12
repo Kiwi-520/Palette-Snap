@@ -39,7 +39,7 @@ export function ColorDetails({ pickerState }: ColorDetailsProps) {
         if (!color) {
             return (
                 <div className="flex items-center justify-center text-muted-foreground font-alegreya h-48">
-                    <p>Hover over the image to pick a color.</p>
+                    <p>Upload an image and hover over it to see color details.</p>
                 </div>
             )
         }

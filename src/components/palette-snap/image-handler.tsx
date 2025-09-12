@@ -84,7 +84,7 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
     if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
     }
-    onColorSelect(null);
+    onColorSelect(pickerState);
   };
 
   const openFullScreen = () => {
@@ -106,7 +106,15 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
           { (filteredImage || image) ? (
             <Image ref={imageRef} src={filteredImage || image!} alt="Uploaded preview" fill className="object-contain pointer-events-none" unoptimized/>
           ) : placeholderImage && (
-            <Image src={placeholderImage.imageUrl} alt={placeholderImage.description} data-ai-hint={placeholderImage.imageHint} fill className="object-cover" priority />
+            <>
+              <Image src={placeholderImage.imageUrl} alt={placeholderImage.description} data-ai-hint={placeholderImage.imageHint} fill className="object-cover" priority />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <div className="text-center text-white p-4">
+                  <h2 className="font-belleza text-3xl mb-2">Welcome to Palette Snap</h2>
+                  <p className="font-alegreya text-lg">Upload an image or use your camera to get started.</p>
+                </div>
+              </div>
+            </>
           )}
 
           {image && (
