@@ -134,15 +134,20 @@ const SpectrumVisualizer = ({ histogram }: { histogram: ColorHistogram; }) => {
   const [isSuggesting, setIsSuggesting] = useState(false);
   
   const sortedHistogram = useMemo(() => {
-    return [...histogram].sort((a, b) => {
-      const hslA = rgbToHsl(hexToRgb(a.hex).r, hexToRgb(a.hex).g, hexToRgb(a.hex).b);
-      const hslB = rgbToHsl(hexToRgb(b.hex).r, hexToRgb(b.hex).g, hexToRgb(b.hex).b);
-      if (hslA.h < hslB.h) return -1;
-      if (hslA.h > hslB.h) return 1;
-      if (hslA.s < hslB.s) return -1;
-      if (hslA.s > hslB.s) return 1;
-      if (hslA.l < hslB.l) return -1;
-      if (hslA.l > hslB.l) return 1;
+    // Pre-calculate HSL values for sorting efficiency
+    const histogramWithHsl = histogram.map(color => {
+      const { r, g, b } = hexToRgb(color.hex);
+      return { ...color, hsl: rgbToHsl(r, g, b) };
+    });
+
+    // Sort based on hue, then saturation, then lightness
+    return histogramWithHsl.sort((a, b) => {
+      if (a.hsl.h < b.hsl.h) return -1;
+      if (a.hsl.h > b.hsl.h) return 1;
+      if (a.hsl.s < b.hsl.s) return -1;
+      if (a.hsl.s > b.hsl.s) return 1;
+      if (a.hsl.l < b.hsl.l) return -1;
+      if (a.hsl.l > b.hsl.l) return 1;
       return 0;
     });
   }, [histogram]);
