@@ -25,29 +25,36 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
   
-  const complementaryColors = baseColors.map(getComplementary);
-  
-  // Simple mix: take half from base and half from complementary
-  const half = Math.ceil(MAX_COLORS / 2);
-  const finalPalette = [
-      ...baseColors.slice(0, half),
-      ...complementaryColors.slice(0, MAX_COLORS - half)
-  ];
-
-  // Ensure unique colors
-  const uniquePalette = [...new Set(finalPalette)];
-
-  // Fill up to MAX_COLORS if we lost some due to uniqueness
-  let i = 0;
-  while(uniquePalette.length < MAX_COLORS && i < baseColors.length) {
-    const newComp = getComplementary(baseColors[i]);
-    if(!uniquePalette.includes(newComp)) {
-        uniquePalette.push(newComp);
-    }
-    i++;
+  const changeLightness = (hex: string, amount: number) => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    hsl.l = Math.max(0, Math.min(1, hsl.l * (1 + amount)));
+    const newRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
+    return rgbToHex(newRgb.r, newRgb.g, newRgb.b);
   }
+
+  // Pick first 2 base colors for more variety
+  const primaryBase = baseColors[0];
+  const secondaryBase = baseColors.length > 1 ? baseColors[Math.floor(baseColors.length / 2)] : baseColors[0];
+
+  const primaryComp = getComplementary(primaryBase);
+  const secondaryComp = getComplementary(secondaryBase);
   
-  return uniquePalette.slice(0, MAX_COLORS);
+  const finalPalette = [
+    changeLightness(primaryBase, 0.4), // Light tint
+    changeLightness(primaryBase, 0.2), // Softer tint
+    primaryBase, // Base
+    changeLightness(primaryBase, -0.2), // Shade
+    changeLightness(primaryBase, -0.4), // Darker shade
+    changeLightness(primaryComp, 0.4), // Complementary light tint
+    changeLightness(primaryComp, 0.2), // Complementary softer tint
+    primaryComp, // Complementary Base
+    changeLightness(primaryComp, -0.2), // Complementary shade
+    changeLightness(primaryComp, -0.4), // Complementary darker shade
+  ];
+  
+  return [...new Set(finalPalette)].slice(0, MAX_COLORS);
 }
 
 

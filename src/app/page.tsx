@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card } from '@/components/ui/card';
 import type { BlindnessMode } from '@/lib/color-blindness';
 import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
+import { hexToRgb, rgbToHsl } from '@/lib/color-converter';
 
 export type Palette = string[];
 
@@ -40,9 +41,22 @@ export default function Home() {
     setIsLoading(true);
     try {
       const newHistogram = await generatePaletteFromImage(dataUrl);
-      setHistogram(newHistogram);
-      if (newHistogram.length > 0) {
-        const defaultPalette = newHistogram.slice(0, Math.min(10, newHistogram.length)).map(c => c.hex);
+      
+      const sortedHistogram = newHistogram.sort((a, b) => {
+        const colorA = hexToRgb(a.hex);
+        const colorB = hexToRgb(b.hex);
+        if (colorA && colorB) {
+          const hslA = rgbToHsl(colorA.r, colorA.g, colorA.b);
+          const hslB = rgbToHsl(colorB.r, colorB.g, colorB.b);
+          return hslA.h - hslB.h;
+        }
+        return 0;
+      });
+
+      setHistogram(sortedHistogram);
+
+      if (sortedHistogram.length > 0) {
+        const defaultPalette = sortedHistogram.slice(0, Math.min(10, sortedHistogram.length)).map(c => c.hex);
         setPalette(defaultPalette);
       }
     } catch (error) {
