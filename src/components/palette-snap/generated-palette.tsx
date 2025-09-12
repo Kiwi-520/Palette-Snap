@@ -69,52 +69,63 @@ function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: n
 
 // --- Algorithmic Palette Generation ---
 function generateComplementaryPalette(baseColors: string[]): Palette {
-    const finalPalette: string[] = [];
+    const finalPalette: Set<string> = new Set();
     const totalColors = 10;
-    const colorsPerBase = Math.max(1, Math.floor(totalColors / baseColors.length));
+    const basePaletteSize = Math.floor(totalColors / 2);
+    const complementPaletteSize = totalColors - basePaletteSize;
 
-    // 1. For each selected base color, generate complementary colors
-    baseColors.forEach(baseHex => {
-        if (finalPalette.length >= totalColors) return;
-        const baseRgb = hexToRgb(baseHex);
-        const baseHsl = rgbToHsl(baseRgb.r, baseRgb.g, baseRgb.b);
+    // Helper to generate shades and tints
+    const generateShades = (hsl: {h: number, s: number, l: number}, count: number): string[] => {
+        const shades: string[] = [];
+        // Add the base color itself
+        shades.push(rgbToHex(hslToRgb(hsl.h, hsl.s, hsl.l).r, hslToRgb(hsl.h, hsl.s, hsl.l).g, hslToRgb(hsl.h, hsl.s, hsl.l).b));
         
-        // 2. Find the complementary hue
-        const complementaryHsl = { ...baseHsl, h: (baseHsl.h + 180) % 360 };
+        // Generate tints (lighter) and shades (darker)
+        for(let i = 1; shades.length < count; i++) {
+            // Add a tint
+            const lighterL = Math.min(0.95, hsl.l + i * 0.1);
+            const {r: r1, g: g1, b: b1} = hslToRgb(hsl.h, hsl.s, lighterL);
+            shades.push(rgbToHex(r1, g1, b1));
+            if(shades.length >= count) break;
 
-        // 3. Generate a few colors from the complement
-        for (let i = 0; i < colorsPerBase; i++) {
-            if (finalPalette.length >= totalColors) break;
-            // Create a variety of lightness values for the complement
-            const lightness = 0.2 + (i / (colorsPerBase - 1)) * 0.6; // from 20% to 80%
-            const { r, g, b } = hslToRgb(complementaryHsl.h, complementaryHsl.s, lightness);
-            finalPalette.push(rgbToHex(r, g, b));
+            // Add a shade
+            const darkerL = Math.max(0.05, hsl.l - i * 0.1);
+            const {r: r2, g: g2, b: b2} = hslToRgb(hsl.h, hsl.s, darkerL);
+            shades.push(rgbToHex(r2, g2, b2));
         }
-    });
-
-    // 4. If palette is not full, fill with tints/shades of the original selections
-    let baseIndex = 0;
-    while(finalPalette.length < totalColors) {
-        const baseHex = baseColors[baseIndex % baseColors.length];
-        const baseRgb = hexToRgb(baseHex);
-        const baseHsl = rgbToHsl(baseRgb.r, baseRgb.g, baseRgb.b);
-        
-        // Add a tint or shade of the original color
-        const lightness = finalPalette.length % 2 === 0 ? Math.min(0.9, baseHsl.l + 0.2) : Math.max(0.1, baseHsl.l - 0.2);
-        const { r, g, b } = hslToRgb(baseHsl.h, baseHsl.s, lightness);
-        const newColor = rgbToHex(r,g,b);
-
-        if (!finalPalette.includes(newColor)) {
-            finalPalette.push(newColor);
-        }
-        baseIndex++;
-        // Safety break to prevent infinite loops on very similar colors
-        if(baseIndex > totalColors * 2) break;
+        return shades.slice(0, count);
     }
 
-    return finalPalette.slice(0, totalColors);
-}
+    // 1. Generate colors from the selected base colors
+    const baseColorsHSL = baseColors.map(hex => rgbToHsl(hexToRgb(hex).r, hexToRgb(hex).g, hexToRgb(hex).b));
+    let distributedBaseCount = 0;
+    baseColorsHSL.forEach((hsl, index) => {
+        const numToAdd = Math.ceil(basePaletteSize / baseColorsHSL.length) + (index < basePaletteSize % baseColorsHSL.length ? 1 : 0);
+        const shades = generateShades(hsl, numToAdd);
+        shades.forEach(shade => {
+            if (distributedBaseCount < basePaletteSize) {
+                finalPalette.add(shade);
+                distributedBaseCount++;
+            }
+        });
+    });
 
+    // 2. Generate colors from the complementary colors
+    let distributedComplementCount = 0;
+    baseColorsHSL.forEach((hsl, index) => {
+        const complementaryHsl = { ...hsl, h: (hsl.h + 180) % 360 };
+        const numToAdd = Math.ceil(complementPaletteSize / baseColorsHSL.length) + (index < complementPaletteSize % baseColorsHSL.length ? 1 : 0);
+        const shades = generateShades(complementaryHsl, numToAdd);
+        shades.forEach(shade => {
+            if (distributedComplementCount < complementPaletteSize) {
+                finalPalette.add(shade);
+                distributedComplementCount++;
+            }
+        });
+    });
+
+    return Array.from(finalPalette).slice(0, totalColors);
+}
 
 const SpectrumVisualizer = ({ histogram }: { histogram: ColorHistogram; }) => {
   const { toast } = useToast();
