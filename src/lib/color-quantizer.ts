@@ -49,7 +49,7 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
       }
       
       if (pixelArray.length === 0) {
-        return reject(new Error("No pixels to analyze. The image might be transparent or empty."));
+        return reject(new Error("No pixels to analyze. The image might be transparent or only contain black/white."));
       }
       
       const colorMap = quantize(pixelArray, colorCount);
