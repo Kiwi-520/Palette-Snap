@@ -132,7 +132,7 @@ export default function Home() {
             setFilteredImage={setFilteredImage}
             imageRef={imageRef} 
             pickerState={pickerState}
-            setPickerState={setPickerState}
+            onColorSelect={setPickerState}
             updateLoupe={updateLoupe}
             blindnessMode={blindnessMode}
             setBlindnessMode={setBlindnessMode}

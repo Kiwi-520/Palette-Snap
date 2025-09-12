@@ -16,13 +16,13 @@ interface ImageHandlerProps {
   setFilteredImage: (image: string | null) => void;
   imageRef: React.RefObject<HTMLImageElement>;
   pickerState: { x: number; y: number; color: string; } | null;
-  setPickerState: (state: { x: number; y: number; color: string; } | null) => void;
+  onColorSelect: (state: { x: number; y: number; color: string; } | null) => void;
   updateLoupe: (x: number, y: number) => void;
   blindnessMode: BlindnessMode;
   setBlindnessMode: (mode: BlindnessMode) => void;
 }
 
-export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef, pickerState, setPickerState, updateLoupe, blindnessMode, setBlindnessMode }: ImageHandlerProps) {
+export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef, pickerState, onColorSelect, updateLoupe, blindnessMode, setBlindnessMode }: ImageHandlerProps) {
   const placeholderImage = PlaceHolderImages.find(p => p.id === 'palette-snap-placeholder');
   const animationFrameRef = useRef<number>();
 
@@ -84,7 +84,7 @@ export function ImageHandler({ image, filteredImage, setFilteredImage, imageRef,
     if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
     }
-    setPickerState(null);
+    onColorSelect(null);
   };
 
   const openFullScreen = () => {
