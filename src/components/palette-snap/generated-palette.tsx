@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Loader2, Save, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -8,9 +8,50 @@ import type { ColorHistogram } from '@/lib/color-quantizer';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return { h: 0, s: 0, l: 0 };
+
+  let r = parseInt(result[1], 16) / 255;
+  let g = parseInt(result[2], 16) / 255;
+  let b = parseInt(result[3], 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  return { h, s, l };
+}
+
 const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; onSave: (palette: string[]) => void; }) => {
   const { toast } = useToast();
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  
+  const sortedHistogram = useMemo(() => {
+    return [...histogram].sort((a, b) => {
+      const hslA = hexToHsl(a.hex);
+      const hslB = hexToHsl(b.hex);
+      if (hslA.h < hslB.h) return -1;
+      if (hslA.h > hslB.h) return 1;
+      if (hslA.s < hslB.s) return -1;
+      if (hslA.s > hslB.s) return 1;
+      if (hslA.l < hslB.l) return -1;
+      if (hslA.l > hslB.l) return 1;
+      return 0;
+    });
+  }, [histogram]);
+
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -49,7 +90,7 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
       <p className="font-headline text-lg mb-4 text-foreground/80">Select colors to build your palette</p>
       <ScrollArea className="w-full h-72 mb-8">
         <div className="w-full grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4 pr-4">
-          {histogram.map((color, index) => {
+          {sortedHistogram.map((color, index) => {
             const isSelected = selectedColors.includes(color.hex);
             return (
               <div key={index} className="flex flex-col items-center gap-2 group" onClick={() => toggleColorSelection(color.hex)}>
