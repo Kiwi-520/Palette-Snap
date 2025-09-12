@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Loader2, Save, Check, Wand2 } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { ColorHistogram } from '@/lib/color-quantizer';
@@ -102,7 +102,7 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
 }
 
 
-const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; onSave: (palette: string[]) => void; }) => {
+const SpectrumVisualizer = ({ histogram }: { histogram: ColorHistogram; }) => {
   const { toast } = useToast();
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [suggestedPalette, setSuggestedPalette] = useState<Palette | null>(null);
@@ -186,11 +186,6 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
                   style={{ backgroundColor: color.hex }}
                   title={`Click to select ${color.hex}`}
                 >
-                  {isSelected && (
-                    <div className="w-full h-full flex items-center justify-center bg-black/30">
-                        <Check className="w-6 h-6 text-white" />
-                    </div>
-                  )}
                 </div>
                 <p 
                     className="font-code text-xs text-foreground/70 tracking-wider cursor-pointer"
@@ -207,10 +202,6 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
       </ScrollArea>
       
       <div className="flex flex-wrap items-center justify-center gap-4">
-        <Button onClick={() => onSave(selectedColors)} disabled={selectedColors.length === 0} className="font-headline">
-          <Save className="mr-2" /> 
-          Save Selected Colors ({selectedColors.length})
-        </Button>
         <Button onClick={handleSuggestPalette} disabled={isSuggesting || selectedColors.length === 0} variant="secondary" className="font-headline">
           {isSuggesting ? <Loader2 className="mr-2 animate-spin" /> : <Wand2 className="mr-2" />}
           Suggest Complementary
@@ -233,12 +224,6 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
                     </div>
                 ))}
             </div>
-             <div className="text-center mt-4">
-                <Button onClick={() => onSave(suggestedPalette)} variant="outline">
-                    <Save className="mr-2" />
-                    Save Suggested Palette
-                </Button>
-            </div>
         </div>
       )}
     </div>
@@ -248,10 +233,9 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
 interface GeneratedPaletteProps {
     isLoading: boolean;
     histogram: ColorHistogram | null;
-    onSave: (palette: string[]) => void;
 }
 
-export function GeneratedPalette({ isLoading, histogram, onSave }: GeneratedPaletteProps) {
+export function GeneratedPalette({ isLoading, histogram }: GeneratedPaletteProps) {
     return (
         <section className="mt-12">
             <h2 className="font-headline text-4xl text-center mb-6">Color Analysis</h2>
@@ -262,7 +246,7 @@ export function GeneratedPalette({ isLoading, histogram, onSave }: GeneratedPale
                         <p className="font-headline text-lg opacity-80">Analyzing your image...</p>
                     </div>
                 ) : histogram && histogram.length > 0 ? (
-                    <SpectrumVisualizer histogram={histogram} onSave={onSave} />
+                    <SpectrumVisualizer histogram={histogram} />
                 ) : (
                     <div className="text-center text-foreground/60">
                       <p className="font-headline text-xl">Upload an image or use your camera</p>
