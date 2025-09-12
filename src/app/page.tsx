@@ -7,13 +7,14 @@ import { AppHeader } from '@/components/palette-snap/app-header';
 import { ImageHandler } from '@/components/palette-snap/image-handler';
 import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
 import { SavedPalettes } from '@/components/palette-snap/saved-palettes';
-import { generatePaletteFromImage } from '@/lib/color-quantizer';
+import { generatePaletteFromImage, type ColorHistogram } from '@/lib/color-quantizer';
 
 export type Palette = string[];
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
   const [palette, setPalette] = useState<Palette | null>(null);
+  const [histogram, setHistogram] = useState<ColorHistogram | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [savedPalettes, setSavedPalettes] = useLocalStorage<Palette[]>('saved-palettes', []);
   const { toast } = useToast();
@@ -21,9 +22,13 @@ export default function Home() {
   const processImage = async (dataUrl: string) => {
     setImage(dataUrl);
     setPalette(null);
+    setHistogram(null);
     setIsLoading(true);
     try {
-      const newPalette = await generatePaletteFromImage(dataUrl);
+      const newHistogram = await generatePaletteFromImage(dataUrl);
+      setHistogram(newHistogram);
+      // Create a simple palette from the top 6 colors for saving
+      const newPalette = newHistogram.slice(0, 6).map(c => c.hex);
       setPalette(newPalette);
     } catch (error) {
       console.error("Failed to generate palette:", error);
@@ -74,7 +79,7 @@ export default function Home() {
       <AppHeader />
       <main className="container mx-auto px-4 pb-16">
         <ImageHandler image={image} onImageChange={handleImageChange} onImageData={handleImageData} />
-        <GeneratedPalette isLoading={isLoading} palette={palette} onSave={savePalette} />
+        <GeneratedPalette isLoading={isLoading} histogram={histogram} onSave={savePalette} />
         <SavedPalettes savedPalettes={savedPalettes} onRemove={removePalette} />
       </main>
     </div>

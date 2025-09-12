@@ -6,114 +6,13 @@ function rgbToHex(r: number, g: number, b: number): string {
   return "#" + ((1 << 24) + (rInt << 16) + (gInt << 8) + bInt).toString(16).slice(1).toUpperCase();
 }
 
-// K-Means clustering implementation for color quantization
-function kmeans(pixels: number[][], k: number): number[][] {
-    if (pixels.length === 0 || k === 0) {
-        return [];
-    }
-
-    const uniquePixels = Array.from(new Set(pixels.map(p => JSON.stringify(p)))).map(s => JSON.parse(s) as number[]);
-    if (uniquePixels.length < k) {
-        k = uniquePixels.length;
-    }
-    if (k === 0) return [];
-
-    const colorDistanceSquared = (c1: number[], c2: number[]) => {
-        return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2;
-    };
-
-    let centroids: number[][] = [];
-    centroids.push(uniquePixels[Math.floor(Math.random() * uniquePixels.length)]);
-
-    while (centroids.length < k) {
-        let distances: number[] = uniquePixels.map(pixel => {
-            let minDistance = Infinity;
-            for (const centroid of centroids) {
-                const dist = colorDistanceSquared(pixel, centroid);
-                if (dist < minDistance) {
-                    minDistance = dist;
-                }
-            }
-            return minDistance;
-        });
-
-        let sumDistances = distances.reduce((a, b) => a + b, 0);
-        let randomValue = Math.random() * sumDistances;
-        
-        let nextCentroid: number[] | null = null;
-        for (let i = 0; i < uniquePixels.length; i++) {
-            randomValue -= distances[i];
-            if (randomValue <= 0) {
-                nextCentroid = uniquePixels[i];
-                break;
-            }
-        }
-        centroids.push(nextCentroid || uniquePixels[uniquePixels.length - 1]);
-    }
-
-    let assignments = new Array(pixels.length).fill(0);
-    const maxIterations = 20;
-
-    for (let i = 0; i < maxIterations; i++) {
-        let changed = false;
-        for (let j = 0; j < pixels.length; j++) {
-            let minDistance = Infinity;
-            let bestCentroid = 0;
-            for (let c = 0; c < k; c++) {
-                const distance = colorDistanceSquared(pixels[j], centroids[c]);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    bestCentroid = c;
-                }
-            }
-            if (assignments[j] !== bestCentroid) {
-                assignments[j] = bestCentroid;
-                changed = true;
-            }
-        }
-
-        if (!changed) break;
-
-        const newCentroids: number[][] = new Array(k).fill(0).map(() => [0, 0, 0]);
-        const counts = new Array(k).fill(0);
-
-        for (let j = 0; j < pixels.length; j++) {
-            const centroidIndex = assignments[j];
-            newCentroids[centroidIndex][0] += pixels[j][0];
-            newCentroids[centroidIndex][1] += pixels[j][1];
-            newCentroids[centroidIndex][2] += pixels[j][2];
-            counts[centroidIndex]++;
-        }
-
-        for (let c = 0; c < k; c++) {
-            if (counts[c] > 0) {
-                newCentroids[c][0] /= counts[c];
-                newCentroids[c][1] /= counts[c];
-                newCentroids[c][2] /= counts[c];
-            } else {
-                let maxDist = -1;
-                let farthestPixel: number[] | null = null;
-                for (const pixel of uniquePixels) {
-                    let minDistToCentroid = Infinity;
-                    for (const centroid of newCentroids.filter((_, idx) => idx !== c)) {
-                       minDistToCentroid = Math.min(minDistToCentroid, colorDistanceSquared(pixel, centroid));
-                    }
-                    if (minDistToCentroid > maxDist) {
-                        maxDist = minDistToCentroid;
-                        farthestPixel = pixel;
-                    }
-                }
-                newCentroids[c] = farthestPixel || uniquePixels[Math.floor(Math.random() * uniquePixels.length)];
-            }
-        }
-        centroids = newCentroids;
-    }
-
-    return centroids;
-}
+export type ColorHistogram = {
+  hex: string;
+  count: number;
+}[];
 
 
-export function generatePaletteFromImage(imageUrl: string, colorCount: number = 6): Promise<string[]> {
+export function generatePaletteFromImage(imageUrl: string): Promise<ColorHistogram> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
@@ -126,7 +25,7 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
           return reject(new Error('Could not get canvas context.'));
         }
 
-        const MAX_DIMENSION = 100;
+        const MAX_DIMENSION = 200;
         let width = img.width;
         let height = img.height;
 
@@ -148,36 +47,24 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
         const imageData = ctx.getImageData(0, 0, width, height);
         const pixelData = imageData.data;
         
-        const pixelArray: number[][] = [];
         const colorFrequency: { [key: string]: number } = {};
 
         for (let i = 0; i < pixelData.length; i += 4) {
           if (pixelData[i+3] < 128) continue;
           
-          const rgb = [pixelData[i], pixelData[i+1], pixelData[i+2]];
-          pixelArray.push(rgb);
-          
-          const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+          const hex = rgbToHex(pixelData[i], pixelData[i+1], pixelData[i+2]);
           colorFrequency[hex] = (colorFrequency[hex] || 0) + 1;
         }
+
+        const histogram: ColorHistogram = Object.entries(colorFrequency)
+          .map(([hex, count]) => ({ hex, count }))
+          .sort((a, b) => b.count - a.count);
         
-        if (pixelArray.length === 0) {
+        if (histogram.length === 0) {
           return resolve([]);
         }
         
-        const centroids = kmeans(pixelArray, Math.min(colorCount, pixelArray.length));
-        let palette = centroids.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
-
-        // Get unique colors sorted by frequency
-        const sortedUniqueColors = Object.keys(colorFrequency).sort((a, b) => colorFrequency[b] - colorFrequency[a]);
-
-        // Combine palettes and remove duplicates
-        const combinedPalette = new Set([...palette, ...sortedUniqueColors]);
-
-        // Take the requested number of colors
-        palette = Array.from(combinedPalette).slice(0, colorCount);
-        
-        resolve(palette);
+        resolve(histogram);
       } catch (error) {
           console.error("Error during palette generation:", error);
           reject(new Error("An unexpected error occurred while processing the image."));
