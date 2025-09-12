@@ -75,6 +75,7 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
 
     // 1. For each selected base color, generate complementary colors
     baseColors.forEach(baseHex => {
+        if (finalPalette.length >= totalColors) return;
         const baseRgb = hexToRgb(baseHex);
         const baseHsl = rgbToHsl(baseRgb.r, baseRgb.g, baseRgb.b);
         

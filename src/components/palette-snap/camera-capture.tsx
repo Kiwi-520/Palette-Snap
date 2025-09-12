@@ -18,9 +18,14 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    let isCancelled = false;
     const getCameraPermission = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (isCancelled) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
         setHasCameraPermission(true);
 
         if (videoRef.current) {
@@ -28,6 +33,7 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
+        if (isCancelled) return;
         setHasCameraPermission(false);
         toast({
           variant: 'destructive',
@@ -40,6 +46,7 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
     getCameraPermission();
     
     return () => {
+        isCancelled = true;
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
             stream.getTracks().forEach(track => track.stop());
