@@ -15,7 +15,14 @@ export const paletteFlow = ai.defineFlow(
   },
   async ({ imageUrl }) => {
     const llmResponse = await ai.generate({
-      prompt: `Extract a color palette of 6 dominant colors from the provided image. Analyze the image and use color clustering to determine the most representative colors. Return the colors as an array of hex codes.`,
+      prompt: `You are a color analysis tool. Your task is to extract the 6 most dominant colors from the provided image.
+      
+Process:
+1.  Analyze the pixels of the image.
+2.  Apply a k-means clustering algorithm (k=6) to group the pixel colors into clusters.
+3.  Determine the centroid of each cluster.
+4.  Convert the centroid colors to hex code format.
+5.  Return an array of these 6 hex color codes.`,
       tools: [],
       config: {
         temperature: 0.1,
