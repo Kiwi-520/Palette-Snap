@@ -96,11 +96,16 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
       cancelAnimationFrame(animationFrameRef.current);
     }
     
+    // Capture the target and event details before the animation frame
+    const currentTarget = e.currentTarget;
+    const touch = 'touches' in e ? e.touches[0] : e;
+    const clientX = touch.clientX;
+    const clientY = touch.clientY;
+
     animationFrameRef.current = requestAnimationFrame(() => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const touch = 'touches' in e ? e.touches[0] : e;
-      const x = Math.round(touch.clientX - rect.left);
-      const y = Math.round(touch.clientY - rect.top);
+      const rect = currentTarget.getBoundingClientRect();
+      const x = Math.round(clientX - rect.left);
+      const y = Math.round(clientY - rect.top);
 
       if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
         setIsPicking(false);
