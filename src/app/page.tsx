@@ -7,13 +7,14 @@ import { PaletteControls } from '@/components/palette-snap/palette-controls';
 import { ColorDetails } from '@/components/palette-snap/color-details';
 import { generatePaletteFromImage, type ColorHistogram } from '@/lib/color-quantizer';
 import { Button } from '@/components/ui/button';
-import { Camera, Upload, Library } from 'lucide-react';
+import { Camera, Upload, Library, Sparkles } from 'lucide-react';
 import { CameraCapture } from '@/components/palette-snap/camera-capture';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { SavedPalettes } from '@/components/palette-snap/saved-palettes';
 import type { BlindnessMode } from '@/lib/color-blindness';
 import { useLocalStorage } from '@/lib/hooks/use-local-storage';
+import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
 
 export type Palette = string[];
 export type SavedPalette = {
@@ -32,6 +33,8 @@ export default function Home() {
   const [pickerState, setPickerState] = useState<{ x: number; y: number; color: string; } | null>(null);
   const [palette, setPalette] = useState<Palette>([]);
   const [savedPalettes, setSavedPalettes] = useLocalStorage<SavedPalette[]>('palettes', []);
+  const [selectedColorsForGeneration, setSelectedColorsForGeneration] = useState<Palette>([]);
+  const [showGenerated, setShowGenerated] = useState(false);
 
   const { toast } = useToast();
 
@@ -40,11 +43,13 @@ export default function Home() {
 
   const processImage = useCallback(async (dataUrl: string) => {
     setImage(dataUrl);
-    setFilteredImage(dataUrl); // Start with the original image
+    setFilteredImage(dataUrl);
     setHistogram(null);
     setPalette([]);
     setPickerState(null);
     setIsLoading(true);
+    setShowGenerated(false);
+    setSelectedColorsForGeneration([]);
     try {
       const newHistogram = await generatePaletteFromImage(dataUrl);
       setHistogram(newHistogram);
@@ -98,27 +103,34 @@ export default function Home() {
   };
 
   useEffect(() => {
-    // This effect creates a canvas copy of the displayed image for the color picker
-    // It runs whenever the filtered image changes
     if (filteredImage && imageRef.current) {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d', { willReadFrequently: true });
       const img = imageRef.current;
+      let animationFrameId: number;
 
       const updateCanvas = () => {
         if (context && img.complete && img.naturalWidth > 0) {
-          // Match canvas dimensions to the displayed image dimensions
           canvas.width = img.clientWidth;
           canvas.height = img.clientHeight;
           context.drawImage(img, 0, 0, img.clientWidth, img.clientHeight);
           canvasRef.current = canvas;
         }
       };
+      
+      img.onload = updateCanvas;
+      updateCanvas();
 
-      if (img.complete) {
-        updateCanvas();
-      } else {
-        img.onload = updateCanvas;
+      const handleResize = () => {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(updateCanvas);
+      };
+
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        img.onload = null;
+        cancelAnimationFrame(animationFrameId);
       }
     }
   }, [filteredImage]);
@@ -134,6 +146,29 @@ export default function Home() {
       setPickerState({ x: clampedX, y: clampedY, color });
     }
   }, []);
+
+  const handleSuggestClick = () => {
+    const selected = palette.filter(c => selectedColorsForGeneration.includes(c));
+    if(selected.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Colors Selected",
+        description: "Please select colors from the palette to generate a complementary palette.",
+      });
+      return;
+    }
+    setShowGenerated(true);
+  }
+
+  const onPaletteColorClick = (color: string) => {
+    setSelectedColorsForGeneration(prev => {
+        if(prev.includes(color)) {
+            return prev.filter(c => c !== color);
+        } else {
+            return [...prev, color];
+        }
+    })
+  }
 
   return (
     <div className="w-full bg-background font-sans text-foreground p-4 lg:p-8">
@@ -156,7 +191,18 @@ export default function Home() {
             histogram={histogram}
             isLoading={isLoading}
             onSave={handleSavePalette}
+            selectedColors={selectedColorsForGeneration}
+            onColorClick={onPaletteColorClick}
           />
+           {selectedColorsForGeneration.length > 0 && (
+                <div className='flex justify-center'>
+                    <Button onClick={handleSuggestClick} size="lg">
+                        <Sparkles className="mr-2 h-5 w-5" />
+                        Suggest Complementary
+                    </Button>
+                </div>
+            )}
+            {showGenerated && <GeneratedPalette baseColors={selectedColorsForGeneration} />}
         </div>
         <div className="lg:col-span-1 flex flex-col gap-8">
             <ColorDetails pickerState={pickerState} />

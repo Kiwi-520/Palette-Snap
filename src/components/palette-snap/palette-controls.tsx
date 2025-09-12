@@ -16,9 +16,11 @@ interface PaletteControlsProps {
     histogram: ColorHistogram | null;
     isLoading: boolean;
     onSave: () => void;
+    selectedColors: string[];
+    onColorClick: (color: string) => void;
 }
 
-export function PaletteControls({ palette, setPalette, histogram, isLoading, onSave }: PaletteControlsProps) {
+export function PaletteControls({ palette, setPalette, histogram, isLoading, onSave, selectedColors, onColorClick }: PaletteControlsProps) {
     const { toast } = useToast();
 
     const addColor = () => {
@@ -94,7 +96,7 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="font-belleza">Palette</CardTitle>
+                <CardTitle className="font-belleza">Dominant Colors Palette</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row items-center gap-4 pt-2">
                 <div className="flex border rounded-md">
@@ -109,10 +111,10 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
                     {palette.map((color, index) => (
                         <div 
                             key={index} 
-                            className="h-10 rounded-md w-full cursor-pointer transition-transform hover:scale-110" 
+                            className={cn("h-10 rounded-md w-full cursor-pointer transition-transform hover:scale-110", selectedColors.includes(color) && "ring-2 ring-offset-2 ring-primary")}
                             style={{ backgroundColor: color }}
-                            onClick={() => copyToClipboard(color, color)}
-                            title={`Copy ${color}`}
+                            onClick={() => onColorClick(color)}
+                            title={`Click to select, or copy ${color}`}
                         />
                     ))}
                     {Array.from({ length: 10 - palette.length }).map((_, index) => (
