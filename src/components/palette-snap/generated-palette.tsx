@@ -18,9 +18,12 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
   const getComplementary = (hex: string): string => {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    hsl.h = (hsl.h + 180) % 360;
-    const compRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
+    // Invert the RGB values
+    const compRgb = {
+      r: 255 - rgb.r,
+      g: 255 - rgb.g,
+      b: 255 - rgb.b,
+    };
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
   
