@@ -55,7 +55,7 @@ export default function Home() {
 
       setHistogram(sortedHistogram);
       
-      const newPalette = sortedHistogram.map(c => c.hex);
+      const newPalette = sortedHistogram.map(c => c.hex).slice(0, 10);
       setPalette(newPalette);
 
     } catch (error) {
