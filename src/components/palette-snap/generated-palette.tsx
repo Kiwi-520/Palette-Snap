@@ -7,34 +7,100 @@ import { useToast } from '@/hooks/use-toast';
 import type { ColorHistogram } from '@/lib/color-quantizer';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { getComplementaryPalette } from '@/app/actions';
 import type { Palette } from '@/app/page';
 
-function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return { h: 0, s: 0, l: 0 };
-
-  let r = parseInt(result[1], 16) / 255;
-  let g = parseInt(result[2], 16) / 255;
-  let b = parseInt(result[3], 16) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0, s = 0, l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-
-  return { h, s, l };
+// --- Color Conversion Utilities ---
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
 }
+
+function rgbToHex(r: number, g: number, b: number): string {
+    const rInt = Math.max(0, Math.min(255, Math.round(r)));
+    const gInt = Math.max(0, Math.min(255, Math.round(g)));
+    const bInt = Math.max(0, Math.min(255, Math.round(b)));
+    return "#" + ((1 << 24) + (rInt << 16) + (gInt << 8) + bInt).toString(16).slice(1).toUpperCase();
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return { h: h * 360, s, l };
+}
+
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+    let r, g, b;
+    if (s === 0) {
+        r = g = b = l;
+    } else {
+        const hue2rgb = (p: number, q: number, t: number) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        h /= 360;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return { r: r * 255, g: g * 255, b: b * 255 };
+}
+
+// --- Algorithmic Palette Generation ---
+function generateComplementaryPalette(baseColors: string[]): Palette {
+    // 1. Average the selected colors
+    const avgRgb = baseColors.map(hexToRgb).reduce((acc, c) => ({ r: acc.r + c.r, g: acc.g + c.g, b: acc.b + c.b }), { r: 0, g: 0, b: 0 });
+    avgRgb.r /= baseColors.length;
+    avgRgb.g /= baseColors.length;
+    avgRgb.b /= baseColors.length;
+
+    // 2. Convert average to HSL
+    const avgHsl = rgbToHsl(avgRgb.r, avgRgb.g, avgRgb.b);
+
+    // 3. Find complementary hue
+    const complementaryHsl = { ...avgHsl, h: (avgHsl.h + 180) % 360 };
+
+    // 4. Generate 10 colors by creating tints and shades
+    const palette: Palette = [];
+    const steps = 5;
+
+    // 5 colors from base average
+    for (let i = 0; i < steps; i++) {
+        const lightness = 0.15 + (i / (steps - 1)) * 0.7; // from 15% to 85% lightness
+        const {r, g, b} = hslToRgb(avgHsl.h, avgHsl.s, lightness);
+        palette.push(rgbToHex(r, g, b));
+    }
+
+    // 5 colors from complement
+    for (let i = 0; i < steps; i++) {
+        const lightness = 0.15 + (i / (steps - 1)) * 0.7; // from 15% to 85% lightness
+        const {r, g, b} = hslToRgb(complementaryHsl.h, complementaryHsl.s, lightness);
+        palette.push(rgbToHex(r, g, b));
+    }
+    
+    return palette;
+}
+
 
 const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; onSave: (palette: string[]) => void; }) => {
   const { toast } = useToast();
@@ -44,8 +110,8 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
   
   const sortedHistogram = useMemo(() => {
     return [...histogram].sort((a, b) => {
-      const hslA = hexToHsl(a.hex);
-      const hslB = hexToHsl(b.hex);
+      const hslA = rgbToHsl(hexToRgb(a.hex).r, hexToRgb(a.hex).g, hexToRgb(a.hex).b);
+      const hslB = rgbToHsl(hexToRgb(b.hex).r, hexToRgb(b.hex).g, hexToRgb(b.hex).b);
       if (hslA.h < hslB.h) return -1;
       if (hslA.h > hslB.h) return 1;
       if (hslA.s < hslB.s) return -1;
@@ -56,20 +122,19 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
     });
   }, [histogram]);
 
-  const handleSuggestPalette = async () => {
+  const handleSuggestPalette = () => {
     if (selectedColors.length === 0) {
       toast({ title: 'Select some colors first!', description: 'Choose colors from the grid to generate a complementary palette.'});
       return;
     }
     setIsSuggesting(true);
     setSuggestedPalette(null);
-    const result = await getComplementaryPalette(selectedColors);
-    if (result.success && result.palette) {
-      setSuggestedPalette(result.palette);
-    } else {
-      toast({ variant: 'destructive', title: 'Suggestion Failed', description: result.error });
-    }
-    setIsSuggesting(false);
+    // Use a short timeout to allow the UI to update to the loading state
+    setTimeout(() => {
+      const newPalette = generateComplementaryPalette(selectedColors);
+      setSuggestedPalette(newPalette);
+      setIsSuggesting(false);
+    }, 50);
   };
 
   const copyToClipboard = (text: string) => {
@@ -153,9 +218,9 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
       </div>
       
       {suggestedPalette && (
-        <div className="mt-8 w-full max-w-lg">
+        <div className="mt-8 w-full max-w-4xl">
             <h3 className="font-headline text-2xl text-center mb-4">Suggested Palette</h3>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-4">
                 {suggestedPalette.map((color, index) => (
                     <div key={index} className="flex flex-col items-center gap-2 group">
                         <div 
@@ -164,7 +229,7 @@ const SpectrumVisualizer = ({ histogram, onSave }: { histogram: ColorHistogram; 
                             onClick={() => copyToClipboard(color)}
                             title={`Click to copy ${color}`}
                         />
-                        <p className="font-code text-sm text-foreground/70 tracking-wider">{color}</p>
+                        <p className="font-code text-xs sm:text-sm text-foreground/70 tracking-wider">{color}</p>
                     </div>
                 ))}
             </div>
