@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "palette-snap-placeholder",
+      "description": "A vibrant abstract painting to inspire color palettes.",
+      "imageUrl": "https://picsum.photos/seed/palettesnap/1200/800",
+      "imageHint": "abstract painting"
+    }
+  ]
 }
