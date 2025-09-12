@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Palette, SavedPalette } from "@/app/page";
 import { Trash2, CheckSquare } from "lucide-react";
+import { DialogClose } from "@radix-ui/react-dialog";
 
 interface SavedPalettesProps {
   savedPalettes: SavedPalette[];
@@ -33,7 +34,7 @@ export function SavedPalettes({ savedPalettes, setSavedPalettes, setPalette }: S
 
   if (savedPalettes.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
+      <div className="text-center text-muted-foreground py-8 font-alegreya">
         <p>You haven't saved any palettes yet.</p>
         <p className="text-sm">Use the "Save" icon on a generated palette to add it here.</p>
       </div>
@@ -41,17 +42,19 @@ export function SavedPalettes({ savedPalettes, setSavedPalettes, setPalette }: S
   }
 
   return (
-    <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2">
+    <div className="max-h-[60vh] overflow-y-auto space-y-4 -mr-6 pr-6">
       {savedPalettes.map(p => (
         <div key={p.id} className="border p-4 rounded-lg">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">{p.name}</h3>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" onClick={() => applyPalette(p.colors)}>
-                <CheckSquare className="w-4 h-4 text-green-500" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => deletePalette(p.id)}>
-                <Trash2 className="w-4 h-4 text-destructive" />
+            <h3 className="font-semibold font-belleza">{p.name}</h3>
+            <div className="flex gap-1">
+              <DialogClose asChild>
+                <Button variant="ghost" size="icon" onClick={() => applyPalette(p.colors)} title="Apply this palette">
+                    <CheckSquare className="w-5 h-5 text-green-500" />
+                </Button>
+              </DialogClose>
+              <Button variant="ghost" size="icon" onClick={() => deletePalette(p.id)} title="Delete this palette">
+                <Trash2 className="w-5 h-5 text-destructive" />
               </Button>
             </div>
           </div>

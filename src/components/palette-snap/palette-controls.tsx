@@ -8,6 +8,7 @@ import type { ColorHistogram } from "@/lib/color-quantizer";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface PaletteControlsProps {
     palette: Palette;
@@ -60,12 +61,16 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
     }
 
     const formatCss = () => {
-        return palette.map((color, i) => `--color-${i+1}: ${color};`).join('\n');
+        return ":root {\n" + palette.map((color, i) => `  --color-${i+1}: ${color};`).join('\n') + "\n}";
     }
 
     const formatScss = () => {
         return palette.map((color, i) => `$color-${i+1}: ${color};`).join('\n');
     }
+
+    const isAddDisabled = isLoading || !histogram || palette.length >= Math.min(20, histogram.length);
+    const isRemoveDisabled = isLoading || palette.length <= 2;
+
 
     if (isLoading) {
         return (
@@ -93,14 +98,14 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row items-center gap-4 pt-2">
                 <div className="flex border rounded-md">
-                    <Button variant="ghost" size="icon" onClick={addColor} className="rounded-r-none border-r" title="Add color">
+                    <Button variant="ghost" size="icon" onClick={addColor} className="rounded-r-none border-r" title="Add color" disabled={isAddDisabled}>
                         <Plus className="w-4 h-4"/>
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={removeColor} className="rounded-l-none" title="Remove color">
+                    <Button variant="ghost" size="icon" onClick={removeColor} className="rounded-l-none" title="Remove color" disabled={isRemoveDisabled}>
                         <Minus className="w-4 h-4"/>
                     </Button>
                 </div>
-                <div className="flex-grow grid grid-cols-5 sm:grid-cols-10 md:grid-cols-10 lg:grid-cols-10 gap-1 w-full">
+                <div className="flex-grow grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-1 w-full">
                     {palette.map((color, index) => (
                         <div 
                             key={index} 
@@ -109,6 +114,9 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
                             onClick={() => copyToClipboard(color, color)}
                             title={`Copy ${color}`}
                         />
+                    ))}
+                    {Array.from({ length: 10 - palette.length }).map((_, index) => (
+                      <div key={index} className={cn("h-10 rounded-md w-full bg-muted/50", { 'hidden sm:block': palette.length > 5 && index < 5 } )} />
                     ))}
                 </div>
                 <div className="flex border rounded-md">

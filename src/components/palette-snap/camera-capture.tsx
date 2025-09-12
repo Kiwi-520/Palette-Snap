@@ -18,10 +18,13 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    let stream: MediaStream | null = null;
     let isCancelled = false;
+
     const getCameraPermission = async () => {
+      if (hasCameraPermission === true || isCancelled) return;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         if (isCancelled) {
           stream.getTracks().forEach(track => track.stop());
           return;
@@ -47,12 +50,11 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
     
     return () => {
         isCancelled = true;
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
+        if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
     }
-  }, [toast]);
+  }, [toast, hasCameraPermission]);
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -102,15 +104,15 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
         <div className="flex gap-4">
             {capturedImage ? (
             <>
-                <Button onClick={handleRetake} variant="outline">
+                <Button onClick={handleRetake} variant="outline" size="lg">
                     <RefreshCw className="mr-2" /> Retake
                 </Button>
-                <Button onClick={handleConfirm}>
+                <Button onClick={handleConfirm} size="lg">
                     <Check className="mr-2" /> Use Photo
                 </Button>
             </>
             ) : (
-            <Button onClick={handleCapture} disabled={!hasCameraPermission}>
+            <Button onClick={handleCapture} disabled={hasCameraPermission !== true} size="lg">
                 <Camera className="mr-2" /> Capture
             </Button>
             )}

@@ -9,7 +9,7 @@ import { generatePaletteFromImage, type ColorHistogram } from '@/lib/color-quant
 import { Button } from '@/components/ui/button';
 import { Camera, Upload, Library } from 'lucide-react';
 import { CameraCapture } from '@/components/palette-snap/camera-capture';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { SavedPalettes } from '@/components/palette-snap/saved-palettes';
 import type { BlindnessMode } from '@/lib/color-blindness';
@@ -40,7 +40,7 @@ export default function Home() {
 
   const processImage = useCallback(async (dataUrl: string) => {
     setImage(dataUrl);
-    setFilteredImage(dataUrl);
+    setFilteredImage(dataUrl); // Start with the original image
     setHistogram(null);
     setPalette([]);
     setPickerState(null);
@@ -49,7 +49,7 @@ export default function Home() {
       const newHistogram = await generatePaletteFromImage(dataUrl);
       setHistogram(newHistogram);
       if (newHistogram.length > 0) {
-        const defaultPalette = newHistogram.slice(0, 8).map(c => c.hex);
+        const defaultPalette = newHistogram.slice(0, Math.min(10, newHistogram.length)).map(c => c.hex);
         setPalette(defaultPalette);
       }
     } catch (error) {
@@ -98,23 +98,30 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (image && imageRef.current) {
+    // This effect creates a canvas copy of the displayed image for the color picker
+    // It runs whenever the filtered image changes
+    if (filteredImage && imageRef.current) {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d', { willReadFrequently: true });
       const img = imageRef.current;
 
       const updateCanvas = () => {
         if (context && img.complete && img.naturalWidth > 0) {
+          // Match canvas dimensions to the displayed image dimensions
           canvas.width = img.clientWidth;
           canvas.height = img.clientHeight;
           context.drawImage(img, 0, 0, img.clientWidth, img.clientHeight);
           canvasRef.current = canvas;
         }
       };
-      if (img.complete) updateCanvas();
-      else img.onload = updateCanvas;
+
+      if (img.complete) {
+        updateCanvas();
+      } else {
+        img.onload = updateCanvas;
+      }
     }
-  }, [image, filteredImage]);
+  }, [filteredImage]);
 
   const updateLoupe = useCallback((x: number, y: number) => {
     if (!canvasRef.current) return;
@@ -157,8 +164,8 @@ export default function Home() {
                 <p className="font-belleza text-lg text-foreground">Get Started</p>
                 <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
                     <Button asChild size="lg" className="flex-1">
-                        <label htmlFor="image-upload" className="cursor-pointer flex items-center gap-2">
-                            <Upload className="h-5 w-5" />
+                        <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center">
+                            <Upload className="mr-2 h-5 w-5" />
                             Upload
                         </label>
                     </Button>
@@ -169,7 +176,7 @@ export default function Home() {
                                 Camera
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl p-4">
+                        <DialogContent className="max-w-3xl p-4 sm:p-6">
                             <DialogHeader>
                                 <DialogTitle>Capture from Camera</DialogTitle>
                             </DialogHeader>
