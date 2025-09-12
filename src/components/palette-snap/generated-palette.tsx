@@ -20,7 +20,7 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    hsl.h = (hsl.h + 180) % 360; // Correct 180-degree hue shift
+    hsl.h = (hsl.h + 180) % 360;
     const compRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
@@ -29,7 +29,7 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    hsl.l = Math.max(0, Math.min(1, hsl.l + amount)); // Correctly add/subtract lightness
+    hsl.l = Math.max(0, Math.min(1, hsl.l + amount));
     const newRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
     return rgbToHex(newRgb.r, newRgb.g, newRgb.b);
   }
