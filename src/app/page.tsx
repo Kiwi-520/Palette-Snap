@@ -54,11 +54,10 @@ export default function Home() {
       });
 
       setHistogram(sortedHistogram);
+      
+      const newPalette = sortedHistogram.map(c => c.hex);
+      setPalette(newPalette);
 
-      if (sortedHistogram.length > 0) {
-        const defaultPalette = sortedHistogram.slice(0, Math.min(10, sortedHistogram.length)).map(c => c.hex);
-        setPalette(defaultPalette);
-      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Could not generate palette.";
       toast({
