@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PlaceHolderImages, type ImagePlaceholder } from '@/lib/placeholder-images';
 import { useState } from 'react';
 import { CameraCapture } from './camera-capture';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface ImageHandlerProps {
   image: string | null;
@@ -48,6 +48,9 @@ export function ImageHandler({ image, onImageChange, onImageData }: ImageHandler
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl p-4">
+                <DialogHeader>
+                  <DialogTitle>Capture from Camera</DialogTitle>
+                </DialogHeader>
                 <CameraCapture onCapture={handleCapture} />
               </DialogContent>
             </Dialog>

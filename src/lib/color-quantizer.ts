@@ -48,6 +48,10 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
         pixelArray.push([pixelData[i], pixelData[i+1], pixelData[i+2]]);
       }
       
+      if (pixelArray.length === 0) {
+        return reject(new Error("No pixels to analyze. The image might be transparent or empty."));
+      }
+      
       const colorMap = quantize(pixelArray, colorCount);
       const palette = colorMap.palette().map((rgb: [number, number, number]) => rgbToHex(rgb[0], rgb[1], rgb[2]));
       
