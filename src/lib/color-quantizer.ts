@@ -51,6 +51,13 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
       if (pixelArray.length === 0) {
         return reject(new Error("No pixels to analyze. The image might be transparent or only contain black/white."));
       }
+
+      const allSame = pixelArray.every(p => p[0] === pixelArray[0][0] && p[1] === pixelArray[0][1] && p[2] === pixelArray[0][2]);
+
+      if (allSame) {
+        const singleColor = pixelArray[0];
+        return resolve([rgbToHex(singleColor[0], singleColor[1], singleColor[2])]);
+      }
       
       const colorMap = quantize(pixelArray, colorCount);
       const palette = colorMap.palette().map((rgb: [number, number, number]) => rgbToHex(rgb[0], rgb[1], rgb[2]));
