@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from '@/lib/color-converter';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import { Palette } from '@/app/page';
+import type { Palette } from '@/app/page';
 import { Button } from '../ui/button';
 import { Copy, Download } from 'lucide-react';
 
@@ -12,70 +12,42 @@ interface GeneratedPaletteProps {
   baseColors: string[];
 }
 
-function generateShades(rgb: {r:number, g:number, b:number}, count: number) {
-    const shades = [];
-    for(let i=0; i<count; i++) {
-        const factor = i / (count - 1);
-        shades.push({
-            r: Math.round(rgb.r * factor),
-            g: Math.round(rgb.g * factor),
-            b: Math.round(rgb.b * factor),
-        });
-    }
-    return shades.map(s => rgbToHex(s.r, s.g, s.b));
-}
-
-function generateTints(rgb: {r:number, g:number, b:number}, count: number) {
-    const tints = [];
-    for(let i=0; i<count; i++) {
-        const factor = i / (count - 1);
-        tints.push({
-            r: Math.round(rgb.r + (255 - rgb.r) * factor),
-            g: Math.round(rgb.g + (255 - rgb.g) * factor),
-            b: Math.round(rgb.b + (255 - rgb.b) * factor),
-        });
-    }
-    return tints.map(t => rgbToHex(t.r, t.g, t.b));
-}
-
-
 function generateComplementaryPalette(baseColors: string[]): Palette {
-  const palette: string[] = [];
-  const MAX_COLORS = 10;
-  const colorsPerBase = Math.floor(MAX_COLORS / (baseColors.length * 2));
-  
   if (baseColors.length === 0) return [];
-
+  const MAX_COLORS = 10;
+  
   const getComplementary = (hex: string) => {
     const rgb = hexToRgb(hex);
-    if(!rgb) return hex;
+    if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
     hsl.h = (hsl.h + 180) % 360;
     const compRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
+  
+  const complementaryColors = baseColors.map(getComplementary);
+  
+  // Simple mix: take half from base and half from complementary
+  const half = Math.ceil(MAX_COLORS / 2);
+  const finalPalette = [
+      ...baseColors.slice(0, half),
+      ...complementaryColors.slice(0, MAX_COLORS - half)
+  ];
 
-  baseColors.forEach(color => {
-    // Add original color variations
-    const originalRgb = hexToRgb(color);
-    if(originalRgb) {
-        const tints = generateTints(originalRgb, Math.ceil(colorsPerBase / 2) + 1).slice(0, -1);
-        const shades = generateShades(originalRgb, Math.floor(colorsPerBase / 2) + 1).slice(1);
-        palette.push(...tints, color, ...shades);
-    }
-    
-    // Add complementary color variations
-    const complementaryHex = getComplementary(color);
-    const complementaryRgb = hexToRgb(complementaryHex);
-    if(complementaryRgb) {
-        const tints = generateTints(complementaryRgb, Math.ceil(colorsPerBase / 2) + 1).slice(0, -1);
-        const shades = generateShades(complementaryRgb, Math.floor(colorsPerBase / 2) + 1).slice(1);
-        palette.push(...tints, complementaryHex, ...shades);
-    }
-  });
+  // Ensure unique colors
+  const uniquePalette = [...new Set(finalPalette)];
 
-  // Ensure palette has exactly 10 colors
-  return palette.slice(0, MAX_COLORS);
+  // Fill up to MAX_COLORS if we lost some due to uniqueness
+  let i = 0;
+  while(uniquePalette.length < MAX_COLORS && i < baseColors.length) {
+    const newComp = getComplementary(baseColors[i]);
+    if(!uniquePalette.includes(newComp)) {
+        uniquePalette.push(newComp);
+    }
+    i++;
+  }
+  
+  return uniquePalette.slice(0, MAX_COLORS);
 }
 
 

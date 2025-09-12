@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Minus, Download, Save, Copy } from "lucide-react";
+import { Plus, Minus, Download, Copy } from "lucide-react";
 import type { Palette } from "@/app/page";
 import type { ColorHistogram } from "@/lib/color-quantizer";
 import { Skeleton } from "../ui/skeleton";
@@ -15,12 +15,9 @@ interface PaletteControlsProps {
     setPalette: (palette: Palette) => void;
     histogram: ColorHistogram | null;
     isLoading: boolean;
-    onSave: () => void;
-    selectedColors: string[];
-    onColorClick: (color: string) => void;
 }
 
-export function PaletteControls({ palette, setPalette, histogram, isLoading, onSave, selectedColors, onColorClick }: PaletteControlsProps) {
+export function PaletteControls({ palette, setPalette, histogram, isLoading }: PaletteControlsProps) {
     const { toast } = useToast();
 
     const addColor = () => {
@@ -111,10 +108,10 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
                     {palette.map((color, index) => (
                         <div 
                             key={index} 
-                            className={cn("h-10 rounded-md w-full cursor-pointer transition-transform hover:scale-110", selectedColors.includes(color) && "ring-2 ring-offset-2 ring-primary")}
+                            className={cn("h-10 rounded-md w-full cursor-pointer transition-transform hover:scale-110")}
                             style={{ backgroundColor: color }}
-                            onClick={() => onColorClick(color)}
-                            title={`Click to select, or copy ${color}`}
+                            onClick={() => copyToClipboard(color, color)}
+                            title={`Copy ${color}`}
                         />
                     ))}
                     {Array.from({ length: 10 - palette.length }).map((_, index) => (
@@ -133,11 +130,8 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading, onS
                             <DropdownMenuItem onClick={() => copyToClipboard(formatScss(), 'SCSS Variables')}>Copy as SCSS</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="ghost" size="icon" onClick={downloadPalette} className="rounded-none border-r" title="Download as PNG">
+                    <Button variant="ghost" size="icon" onClick={downloadPalette} className="rounded-l-none" title="Download as PNG">
                         <Download className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={onSave} className="rounded-l-none" title="Save palette">
-                        <Save className="w-4 h-4" />
                     </Button>
                 </div>
             </CardContent>

@@ -7,21 +7,14 @@ import { PaletteControls } from '@/components/palette-snap/palette-controls';
 import { ColorDetails } from '@/components/palette-snap/color-details';
 import { generatePaletteFromImage, type ColorHistogram } from '@/lib/color-quantizer';
 import { Button } from '@/components/ui/button';
-import { Camera, Upload, Library, Sparkles } from 'lucide-react';
+import { Camera, Upload } from 'lucide-react';
 import { CameraCapture } from '@/components/palette-snap/camera-capture';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import { SavedPalettes } from '@/components/palette-snap/saved-palettes';
 import type { BlindnessMode } from '@/lib/color-blindness';
-import { useLocalStorage } from '@/lib/hooks/use-local-storage';
 import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
 
 export type Palette = string[];
-export type SavedPalette = {
-  id: string;
-  name: string;
-  colors: Palette;
-};
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
@@ -32,10 +25,7 @@ export default function Home() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [pickerState, setPickerState] = useState<{ x: number; y: number; color: string; } | null>(null);
   const [palette, setPalette] = useState<Palette>([]);
-  const [savedPalettes, setSavedPalettes] = useLocalStorage<SavedPalette[]>('palettes', []);
-  const [selectedColorsForGeneration, setSelectedColorsForGeneration] = useState<Palette>([]);
-  const [showGenerated, setShowGenerated] = useState(false);
-
+  
   const { toast } = useToast();
 
   const imageRef = useRef<HTMLImageElement>(null);
@@ -48,8 +38,6 @@ export default function Home() {
     setPalette([]);
     setPickerState(null);
     setIsLoading(true);
-    setShowGenerated(false);
-    setSelectedColorsForGeneration([]);
     try {
       const newHistogram = await generatePaletteFromImage(dataUrl);
       setHistogram(newHistogram);
@@ -83,23 +71,6 @@ export default function Home() {
   const handleCapture = (imageData: string) => {
     processImage(imageData);
     setIsCameraOpen(false);
-  };
-
-  const handleSavePalette = () => {
-    if (palette.length === 0) return;
-    const name = prompt("Enter a name for your palette:");
-    if (name) {
-      const newPalette: SavedPalette = {
-        id: new Date().toISOString(),
-        name,
-        colors: palette,
-      };
-      setSavedPalettes([...savedPalettes, newPalette]);
-      toast({
-        title: "Palette Saved!",
-        description: `"${name}" has been added to your library.`,
-      });
-    }
   };
 
   useEffect(() => {
@@ -147,29 +118,6 @@ export default function Home() {
     }
   }, []);
 
-  const handleSuggestClick = () => {
-    const selected = palette.filter(c => selectedColorsForGeneration.includes(c));
-    if(selected.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Colors Selected",
-        description: "Please select colors from the palette to generate a complementary palette.",
-      });
-      return;
-    }
-    setShowGenerated(true);
-  }
-
-  const onPaletteColorClick = (color: string) => {
-    setSelectedColorsForGeneration(prev => {
-        if(prev.includes(color)) {
-            return prev.filter(c => c !== color);
-        } else {
-            return [...prev, color];
-        }
-    })
-  }
-
   return (
     <div className="w-full bg-background font-sans text-foreground p-4 lg:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-7xl mx-auto">
@@ -190,19 +138,8 @@ export default function Home() {
             setPalette={setPalette} 
             histogram={histogram}
             isLoading={isLoading}
-            onSave={handleSavePalette}
-            selectedColors={selectedColorsForGeneration}
-            onColorClick={onPaletteColorClick}
           />
-           {selectedColorsForGeneration.length > 0 && (
-                <div className='flex justify-center'>
-                    <Button onClick={handleSuggestClick} size="lg">
-                        <Sparkles className="mr-2 h-5 w-5" />
-                        Suggest Complementary
-                    </Button>
-                </div>
-            )}
-            {showGenerated && <GeneratedPalette baseColors={selectedColorsForGeneration} />}
+           {palette.length > 0 && <GeneratedPalette baseColors={palette} />}
         </div>
         <div className="lg:col-span-1 flex flex-col gap-8">
             <ColorDetails pickerState={pickerState} />
@@ -235,22 +172,6 @@ export default function Home() {
                     We think data protection is important! <br />
                     <span className="text-accent font-medium">No data is sent.</span> The magic happens in your browser.
                 </p>
-            </Card>
-            <Card className='bg-card border rounded-lg p-6 flex flex-col items-center justify-center text-center gap-4'>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="secondary" size="lg">
-                            <Library className="mr-2 h-5 w-5" />
-                            My Saved Palettes
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>My Saved Palettes</DialogTitle>
-                        </DialogHeader>
-                        <SavedPalettes savedPalettes={savedPalettes} setSavedPalettes={setSavedPalettes} setPalette={setPalette} />
-                    </DialogContent>
-                </Dialog>
             </Card>
         </div>
       </div>
