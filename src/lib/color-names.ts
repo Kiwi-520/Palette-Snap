@@ -50,14 +50,24 @@ const colorNameList: [string, number, number, number][] = [
 import { hexToRgb, rgbToHsl } from "./color-converter";
 
 export function getClosestColorName(hex: string): string {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return "Unknown";
+    const targetRgb = hexToRgb(hex);
+    if (!targetRgb) return "Unknown";
+    const targetHsl = rgbToHsl(targetRgb.r, targetRgb.g, targetRgb.b);
     
     let closestDistance = Infinity;
     let closestName = "Unknown";
 
     for (const [name, r2, g2, b2] of colorNameList) {
-        const distance = Math.sqrt(Math.pow(rgb.r - r2, 2) + Math.pow(rgb.g - g2, 2) + Math.pow(rgb.b - b2, 2));
+        const currentHsl = rgbToHsl(r2, g2, b2);
+
+        // Calculate the difference for each channel, with hue being weighted more heavily
+        const hueDiff = Math.min(Math.abs(targetHsl.h - currentHsl.h), 360 - Math.abs(targetHsl.h - currentHsl.h));
+        const satDiff = Math.abs(targetHsl.s - currentHsl.s);
+        const lightDiff = Math.abs(targetHsl.l - currentHsl.l);
+
+        // A weighted distance formula that prioritizes hue
+        const distance = (hueDiff * 2) + satDiff + lightDiff;
+
         if (distance < closestDistance) {
             closestDistance = distance;
             closestName = name;
