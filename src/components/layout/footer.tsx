@@ -1,11 +1,9 @@
-import { Palette } from "lucide-react";
 
 export function Footer() {
   return (
     <footer className="border-t bg-background">
       <div className="container mx-auto flex h-24 items-center justify-between px-4 sm:px-6 lg:px-8">
         <a className="flex items-center space-x-2" href="/">
-            <Palette className="h-6 w-6 text-primary" />
             <span className="font-bold">Palette Snap</span>
         </a>
         <div className="text-center text-sm text-muted-foreground">
