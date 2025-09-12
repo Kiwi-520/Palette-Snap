@@ -18,13 +18,10 @@ function kmeans(pixels: number[][], k: number): number[][] {
     }
     if (k === 0) return [];
 
-
-    // --- Helper function to calculate squared distance between two colors ---
     const colorDistanceSquared = (c1: number[], c2: number[]) => {
         return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2;
     };
 
-    // --- 1. Initialize centroids using k-means++ ---
     let centroids: number[][] = [];
     centroids.push(uniquePixels[Math.floor(Math.random() * uniquePixels.length)]);
 
@@ -58,7 +55,6 @@ function kmeans(pixels: number[][], k: number): number[][] {
     const maxIterations = 20;
 
     for (let i = 0; i < maxIterations; i++) {
-        // --- 2. Assign pixels to the closest centroid ---
         let changed = false;
         for (let j = 0; j < pixels.length; j++) {
             let minDistance = Infinity;
@@ -76,9 +72,8 @@ function kmeans(pixels: number[][], k: number): number[][] {
             }
         }
 
-        if (!changed) break; // Convergence
+        if (!changed) break;
 
-        // --- 3. Update centroids ---
         const newCentroids: number[][] = new Array(k).fill(0).map(() => [0, 0, 0]);
         const counts = new Array(k).fill(0);
 
@@ -96,7 +91,6 @@ function kmeans(pixels: number[][], k: number): number[][] {
                 newCentroids[c][1] /= counts[c];
                 newCentroids[c][2] /= counts[c];
             } else {
-                // If a centroid becomes empty, reinitialize it to the pixel furthest from other centroids.
                 let maxDist = -1;
                 let farthestPixel: number[] | null = null;
                 for (const pixel of uniquePixels) {
@@ -155,27 +149,33 @@ export function generatePaletteFromImage(imageUrl: string, colorCount: number = 
         const pixelData = imageData.data;
         
         const pixelArray: number[][] = [];
+        const colorFrequency: { [key: string]: number } = {};
+
         for (let i = 0; i < pixelData.length; i += 4) {
-          // Skip transparent pixels
           if (pixelData[i+3] < 128) continue;
           
-          pixelArray.push([pixelData[i], pixelData[i+1], pixelData[i+2]]);
+          const rgb = [pixelData[i], pixelData[i+1], pixelData[i+2]];
+          pixelArray.push(rgb);
+          
+          const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+          colorFrequency[hex] = (colorFrequency[hex] || 0) + 1;
         }
         
         if (pixelArray.length === 0) {
           return resolve([]);
         }
         
-        const centroids = kmeans(pixelArray, colorCount);
-        
+        const centroids = kmeans(pixelArray, Math.min(colorCount, pixelArray.length));
         let palette = centroids.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
 
-        // Ensure palette has the requested number of colors if possible
-        if (palette.length < colorCount) {
-           const uniqueColors = Array.from(new Set(pixelArray.map(p => rgbToHex(p[0], p[1], p[2]))));
-           const additionalColors = uniqueColors.filter(c => !palette.includes(c));
-           palette = [...palette, ...additionalColors.slice(0, colorCount - palette.length)];
-        }
+        // Get unique colors sorted by frequency
+        const sortedUniqueColors = Object.keys(colorFrequency).sort((a, b) => colorFrequency[b] - colorFrequency[a]);
+
+        // Combine palettes and remove duplicates
+        const combinedPalette = new Set([...palette, ...sortedUniqueColors]);
+
+        // Take the requested number of colors
+        palette = Array.from(combinedPalette).slice(0, colorCount);
         
         resolve(palette);
       } catch (error) {
