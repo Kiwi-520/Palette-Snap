@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import type { Palette } from '@/app/page';
 import { Button } from '../ui/button';
-import { Copy, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 interface GeneratedPaletteProps {
   baseColors: string[];
@@ -20,7 +20,7 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    hsl.h = (hsl.h + 180) % 360;
+    hsl.h = (hsl.h + 180) % 360; // Correct 180-degree hue shift
     const compRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
     return rgbToHex(compRgb.r, compRgb.g, compRgb.b);
   };
@@ -29,29 +29,28 @@ function generateComplementaryPalette(baseColors: string[]): Palette {
     const rgb = hexToRgb(hex);
     if (!rgb) return hex;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    hsl.l = Math.max(0, Math.min(1, hsl.l * (1 + amount)));
+    hsl.l = Math.max(0, Math.min(1, hsl.l + amount)); // Correctly add/subtract lightness
     const newRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
     return rgbToHex(newRgb.r, newRgb.g, newRgb.b);
   }
 
-  // Pick first 2 base colors for more variety
+  // Use the first and a middle color for variety
   const primaryBase = baseColors[0];
   const secondaryBase = baseColors.length > 1 ? baseColors[Math.floor(baseColors.length / 2)] : baseColors[0];
 
   const primaryComp = getComplementary(primaryBase);
-  const secondaryComp = getComplementary(secondaryBase);
   
   const finalPalette = [
-    changeLightness(primaryBase, 0.4), // Light tint
-    changeLightness(primaryBase, 0.2), // Softer tint
+    changeLightness(primaryBase, 0.2), // Light tint
+    changeLightness(primaryBase, 0.1), // Softer tint
     primaryBase, // Base
-    changeLightness(primaryBase, -0.2), // Shade
-    changeLightness(primaryBase, -0.4), // Darker shade
-    changeLightness(primaryComp, 0.4), // Complementary light tint
-    changeLightness(primaryComp, 0.2), // Complementary softer tint
+    changeLightness(primaryBase, -0.1), // Shade
+    changeLightness(primaryBase, -0.2), // Darker shade
+    changeLightness(primaryComp, 0.2), // Complementary light tint
+    changeLightness(primaryComp, 0.1), // Complementary softer tint
     primaryComp, // Complementary Base
-    changeLightness(primaryComp, -0.2), // Complementary shade
-    changeLightness(primaryComp, -0.4), // Complementary darker shade
+    changeLightness(primaryComp, -0.1), // Complementary shade
+    changeLightness(primaryComp, -0.2), // Complementary darker shade
   ];
   
   return [...new Set(finalPalette)].slice(0, MAX_COLORS);
@@ -93,7 +92,7 @@ export function GeneratedPalette({ baseColors }: GeneratedPaletteProps) {
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="font-belleza">Suggested Complementary Palette</CardTitle>
         <div className="flex border rounded-md">
-            <Button variant="ghost" size="icon" onClick={downloadPalette} className="rounded-l-none" title="Download as PNG">
+            <Button variant="ghost" size="icon" onClick={downloadPalette} className="rounded-md" title="Download as PNG">
                 <Download className="w-4 h-4" />
             </Button>
         </div>
