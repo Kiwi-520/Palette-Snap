@@ -1,81 +1,47 @@
 
-function rgbToHex(r: number, g: number, b: number): string {
-  const rInt = Math.round(r);
-  const gInt = Math.round(g);
-  const bInt = Math.round(b);
-  return "#" + ((1 << 24) + (rInt << 16) + (gInt << 8) + bInt).toString(16).slice(1).toUpperCase();
-}
-
 export type ColorHistogram = {
   hex: string;
   count: number;
 }[];
 
-
 export function generatePaletteFromImage(imageUrl: string): Promise<ColorHistogram> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          return reject(new Error('Could not get canvas context.'));
-        }
+    // Check if we are in a browser environment
+    if (typeof window === 'undefined' || !window.Worker) {
+      return reject(new Error('Web Workers are not supported in this environment.'));
+    }
 
-        const MAX_DIMENSION = 200;
-        let width = img.width;
-        let height = img.height;
+    const worker = new Worker('/color-worker.js');
 
-        if (width > height) {
-          if (width > MAX_DIMENSION) {
-            height *= MAX_DIMENSION / width;
-            width = MAX_DIMENSION;
-          }
-        } else {
-          if (height > MAX_DIMENSION) {
-            width *= MAX_DIMENSION / height;
-            height = MAX_DIMENSION;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const pixelData = imageData.data;
-        
-        const colorFrequency: { [key: string]: number } = {};
-
-        for (let i = 0; i < pixelData.length; i += 4) {
-          if (pixelData[i+3] < 128) continue;
-          
-          const hex = rgbToHex(pixelData[i], pixelData[i+1], pixelData[i+2]);
-          colorFrequency[hex] = (colorFrequency[hex] || 0) + 1;
-        }
-
-        const histogram: ColorHistogram = Object.entries(colorFrequency)
-          .map(([hex, count]) => ({ hex, count }))
-          .sort((a, b) => b.count - a.count);
-        
-        if (histogram.length === 0) {
-          return resolve([]);
-        }
-        
+    worker.onmessage = (event) => {
+      const { histogram, error } = event.data;
+      if (error) {
+        console.error("Error from color worker:", error);
+        reject(new Error(error));
+      } else {
         resolve(histogram);
-      } catch (error) {
-          console.error("Error during palette generation:", error);
-          reject(new Error("An unexpected error occurred while processing the image."));
       }
+      worker.terminate();
     };
 
-    img.onerror = (err) => {
-      console.error("Image failed to load:", err);
-      reject(new Error("Could not load the image."));
+    worker.onerror = (error) => {
+      console.error("An error occurred in the color worker:", error);
+      reject(new Error("An unexpected error occurred in the color analysis worker."));
+      worker.terminate();
     };
 
-    img.src = imageUrl;
+    // We need to fetch the image data as a blob to send it to the worker
+    fetch(imageUrl)
+      .then(response => response.blob())
+      .then(blob => createImageBitmap(blob))
+      .then(imageBitmap => {
+        // Transfer the ImageBitmap to the worker to avoid copying data
+        worker.postMessage({ imageBitmap }, [imageBitmap]);
+      })
+      .catch(err => {
+        console.error("Failed to fetch or process image for worker:", err);
+        reject(new Error("Could not load the image for analysis."));
+        worker.terminate();
+      });
   });
 }
