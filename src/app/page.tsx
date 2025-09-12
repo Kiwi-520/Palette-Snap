@@ -13,7 +13,6 @@ export type Palette = string[];
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
-  const [palette, setPalette] = useState<Palette | null>(null);
   const [histogram, setHistogram] = useState<ColorHistogram | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [savedPalettes, setSavedPalettes] = useLocalStorage<Palette[]>('saved-palettes', []);
@@ -21,21 +20,18 @@ export default function Home() {
 
   const processImage = async (dataUrl: string) => {
     setImage(dataUrl);
-    setPalette(null);
     setHistogram(null);
     setIsLoading(true);
     try {
       const newHistogram = await generatePaletteFromImage(dataUrl);
       setHistogram(newHistogram);
-      // Create a simple palette from the top 6 colors for saving
-      const newPalette = newHistogram.slice(0, 6).map(c => c.hex);
-      setPalette(newPalette);
     } catch (error) {
       console.error("Failed to generate palette:", error);
+      const errorMessage = error instanceof Error ? error.message : "Could not generate a color palette from the image.";
       toast({
         variant: "destructive",
         title: "Palette Generation Failed",
-        description: "Could not generate a color palette from the image.",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -58,13 +54,13 @@ export default function Home() {
     processImage(dataUrl);
   }
 
-  const savePalette = () => {
-    if (palette) {
-      if (savedPalettes.some(p => JSON.stringify(p) === JSON.stringify(palette))) {
+  const savePalette = (paletteToSave: Palette) => {
+    if (paletteToSave && paletteToSave.length > 0) {
+      if (savedPalettes.some(p => JSON.stringify(p.sort()) === JSON.stringify(paletteToSave.sort()))) {
         toast({ title: 'Palette already saved!' });
         return;
       }
-      setSavedPalettes([palette, ...savedPalettes]);
+      setSavedPalettes([paletteToSave, ...savedPalettes]);
       toast({ title: 'Palette saved!', description: 'You can find it in your saved palettes below.' });
     }
   };
