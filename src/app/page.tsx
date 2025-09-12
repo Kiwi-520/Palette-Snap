@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { generatePaletteAction } from './actions';
 import { useLocalStorage } from '@/lib/hooks/use-local-storage';
 import { AppHeader } from '@/components/palette-snap/app-header';
 import { ImageHandler } from '@/components/palette-snap/image-handler';
@@ -25,29 +24,16 @@ export default function Home() {
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
         setImage(dataUrl);
-        generatePalette(dataUrl);
+        setPalette(null);
       };
       reader.readAsDataURL(file);
     }
   };
-
-  const generatePalette = async (imageUrl: string) => {
-    setIsLoading(true);
+  
+  const handleImageData = (dataUrl: string) => {
+    setImage(dataUrl);
     setPalette(null);
-    try {
-      const newPalette = await generatePaletteAction({ imageUrl });
-      setPalette(newPalette);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Error generating palette',
-        description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }
 
   const savePalette = () => {
     if (palette) {
@@ -69,7 +55,7 @@ export default function Home() {
     <div className="min-h-screen w-full bg-background font-body text-foreground">
       <AppHeader />
       <main className="container mx-auto px-4 pb-16">
-        <ImageHandler image={image} onImageChange={handleImageChange} />
+        <ImageHandler image={image} onImageChange={handleImageChange} onImageData={handleImageData} />
         <GeneratedPalette isLoading={isLoading} palette={palette} onSave={savePalette} />
         <SavedPalettes savedPalettes={savedPalettes} onRemove={removePalette} />
       </main>
