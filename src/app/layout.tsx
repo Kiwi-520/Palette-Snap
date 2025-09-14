@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { ThemeProvider } from '@/components/layout/theme-provider';
+import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'Palette Snap',
@@ -23,21 +24,23 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700&family=Belleza&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-        >
-            <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-                {children}
-            </main>
-            <Footer />
-            </div>
-            <Toaster />
-        </ThemeProvider>
+        <AuthProvider>
+            <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+            >
+                <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-grow">
+                    {children}
+                </main>
+                <Footer />
+                </div>
+                <Toaster />
+            </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 import { Palette } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { AuthButton } from "./auth-button";
 
 export function Navbar() {
   return (
@@ -12,6 +13,7 @@ export function Navbar() {
           </a>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
+            <AuthButton />
             <ThemeToggle />
         </div>
       </div>

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card } from '@/components/ui/card';
 import { GeneratedPalette } from '@/components/palette-snap/generated-palette';
 import { hexToRgb, rgbToHsl } from '@/lib/color-converter';
+import { SavedPalettes } from '@/components/palette-snap/saved-palettes';
 
 export type Palette = string[];
 
@@ -140,6 +141,7 @@ export default function Home() {
             setPalette={setPalette} 
             histogram={histogram}
             isLoading={isLoading}
+            image={image}
           />
            {palette.length > 0 && <GeneratedPalette baseColors={palette} />}
         </div>
@@ -175,6 +177,7 @@ export default function Home() {
                     <span className="text-accent font-medium">No data is sent.</span> The magic happens in your browser.
                 </p>
             </Card>
+            <SavedPalettes />
         </div>
       </div>
     </div>

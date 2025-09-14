@@ -9,15 +9,17 @@ import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { SavePaletteButton } from "./save-palette-button";
 
 interface PaletteControlsProps {
     palette: Palette;
     setPalette: (palette: Palette) => void;
     histogram: ColorHistogram | null;
     isLoading: boolean;
+    image: string | null;
 }
 
-export function PaletteControls({ palette, setPalette, histogram, isLoading }: PaletteControlsProps) {
+export function PaletteControls({ palette, setPalette, histogram, isLoading, image }: PaletteControlsProps) {
     const { toast } = useToast();
 
     const addColor = () => {
@@ -92,8 +94,9 @@ export function PaletteControls({ palette, setPalette, histogram, isLoading }: P
 
     return (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row justify-between items-center">
                 <CardTitle className="font-belleza">Image Palette</CardTitle>
+                <SavePaletteButton palette={palette} image={image} />
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row items-center gap-4 pt-2">
                 <div className="flex border rounded-md">
